@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>식이쌤의 미니게임천국</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+        :root {
+            --bg-color: #e0f7fa; --main-color: #fffde7; --point-color: #ff8a80; --text-color: #5d4037; 
+            --grid-line: #e0e0e0; --grid-line-thick: #999; --cell-bg: #ffffff; --cell-size: 25px;
+            --pipe-bg: #ffffff; --pipe-color: #a0aec0; --pipe-active: #38bdf8; --pipe-size: 55px;
+            --tile-size: 70px;
+            --mine-cell-size: 30px;
+            --num-1: #0288d1; --num-2: #388e3c; --num-3: #d32f2f; --num-4: #7b1fa2;
+            --num-5: #f57c00; --num-6: #00796b; --num-7: #455a64; --num-8: #c2185b;
+        }
+
+        body { font-family: 'Jua', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow-x: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="25" cy="25" r="20" fill="white" opacity="0.5"/><circle cx="75" cy="50" r="25" fill="white" opacity="0.5"/><circle cx="10" cy="80" r="15" fill="white" opacity="0.5"/></svg>'); z-index: -1; }
+        .container { width: 95%; max-width: 450px; background-color: rgba(255, 255, 255, 0.95); border-radius: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; box-sizing: border-box; text-align: center; position: relative; }
+        .hidden { display: none !important; }
+
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        #login-screen input { padding: 15px; border-radius: 15px; border: 2px solid var(--point-color); font-family: 'Jua', sans-serif; font-size: 1.2rem; text-align: center; margin-bottom: 15px; outline: none; }
+        .btn-primary { padding: 10px 20px; background-color: var(--point-color); color: white; border: none; border-radius: 15px; font-family: 'Jua', sans-serif; font-size: 1.2rem; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 0 #d84315; }
+        .btn-primary:active { transform: translateY(4px); box-shadow: 0 0 0 #d84315; }
+
+        #logout-btn { position: absolute; top: -10px; right: -10px; background-color: #ffccbc; color: #d84315; border: 2px solid white; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-family: 'Jua', sans-serif; }
+        #header { background-color: var(--main-color); border-radius: 20px; padding: 15px; margin-bottom: 20px; border: 3px solid #ffecb3; display: flex; justify-content: space-around; font-size: 1.1rem; }
+        .info-box { display: flex; flex-direction: column; align-items: center; }
+        .info-label { font-size: 0.8rem; color: #8d6e63; margin-bottom: 3px; }
+        .info-value { font-weight: bold; color: var(--point-color); font-size: 1.2rem;}
+
+        #game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .game-card { background-color: white; border-radius: 20px; padding: 15px 10px; border: 3px solid #f5f5f5; cursor: pointer; transition: 0.2s; }
+        .game-card:hover { transform: scale(1.05); border-color: var(--point-color); }
+        .game-icon { font-size: 3rem; margin-bottom: 10px; display: block; }
+        .game-title { font-size: 1.1rem; font-weight: bold; }
+
+        #ranking-box { background-color: white; border-radius: 20px; padding: 15px; border: 2px solid #e0e0e0; }
+        #ranking-title { font-size: 1.1rem; margin-bottom: 10px; color: #795548; display: flex; justify-content: space-between; align-items: center;}
+        .ranking-list { list-style: none; padding: 0; margin: 0; text-align: left; }
+        .ranking-list li { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px dashed #eee; font-size: 0.95rem; }
+        .rank-num { font-weight: bold; color: var(--point-color); margin-right: 10px; display: inline-block; width: 25px;}
+        .rank-score { color: #8d6e63; }
+        .btn-half { padding: 8px; border: none; border-radius: 10px; font-family: 'Jua', sans-serif; cursor: pointer; transition: 0.2s; flex: 1; margin: 0 5px;}
+        .btn-blue { background-color: #bbdefb; color: #1565c0; } .btn-blue:hover { background-color: #90caf9; }
+        .btn-gold { background-color: #fff9c4; color: #f57f17; } .btn-gold:hover { background-color: #fff59d; }
+
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
+        #modal-content { background-color: white; width: 85%; max-width: 400px; border-radius: 25px; padding: 20px; position: relative; text-align: center; }
+        #close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #999; cursor: pointer; border: none; background: none; }
+        #full-ranking-scroll { max-height: 50vh; overflow-y: auto; margin-top: 15px; padding-right: 5px; }
+        #full-ranking-scroll::-webkit-scrollbar { width: 8px; }
+        #full-ranking-scroll::-webkit-scrollbar-thumb { background-color: #ffccbc; border-radius: 10px; }
+        #season-select { padding: 8px; border-radius: 10px; border: 2px solid #fbc02d; font-family: 'Jua', sans-serif; font-size: 1rem; margin-bottom: 10px; outline: none; }
+
+        /* 공통 게임 상단바 및 버튼 */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .btn-back { background: #e0e0e0; color: #555; border: none; padding: 8px 15px; border-radius: 15px; font-family: 'Jua', sans-serif; cursor: pointer; }
+        .diff-btn { background: white; border: 2px solid #81d4fa; border-radius: 15px; padding: 15px; margin: 10px 0; font-family: 'Jua', sans-serif; font-size: 1.2rem; cursor: pointer; width: 100%; transition: 0.2s; color: #0277bd; display: flex; justify-content: space-between; box-shadow: 0 4px 0 #81d4fa;}
+        .diff-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #81d4fa; }
+        .diff-btn.b { border-color: #81c784; color: #2e7d32; box-shadow: 0 4px 0 #81c784; } 
+        .diff-btn.c { border-color: #e57373; color: #c62828; box-shadow: 0 4px 0 #e57373; } 
+        
+        .tools-bar { display: flex; justify-content: center; gap: 10px; margin-top: 15px; margin-bottom: 15px; }
+        .tool-btn { padding: 8px 15px; border-radius: 15px; border: 2px solid #ddd; background: white; font-family: 'Jua', sans-serif; cursor: pointer; font-size: 1.1rem; color: #777;}
+        .tool-btn.active { background: var(--point-color); color: white; border-color: var(--point-color); }
+        .tool-giveup { background: #ffe0b2; color: #ef6c00; border-color: #ffb74d; }
+
+        /* 시즌 점수 제한 UI (새로 추가) */
+        .season-limit-box { background: #f3e5f5; border: 2px dashed #ab47bc; color: #6a1b9a; padding: 10px; border-radius: 15px; margin-bottom: 15px; font-size: 1.1rem; }
+        .progress-bar-bg { width: 100%; background-color: #e1bee7; border-radius: 10px; height: 12px; margin-top: 5px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background-color: #ab47bc; width: 0%; transition: width 0.5s ease-in-out; }
+
+        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 300; justify-content: center; align-items: center; color: white; font-size: 1.5rem; flex-direction: column; gap: 15px;}
+        .spinner { border: 5px solid #f3f3f3; border-top: 5px solid var(--point-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 개별 게임 디자인 압축 */
+        .nono-wrapper{display:flex;flex-direction:column;align-items:center;background:white;padding:10px;border-radius:15px;box-shadow:0 5px 15px rgba(0,0,0,0.05);overflow:auto;max-width:100%} .nono-layout{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;gap:2px} .nono-clues-top{display:grid;gap:1px;align-items:end;border-bottom:2px solid var(--grid-line-thick)} .clue-col{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;width:var(--cell-size);padding-bottom:3px;font-weight:bold;color:var(--text-color);font-size:calc(var(--cell-size)*0.55);line-height:1.1} .nono-clues-left{display:grid;gap:1px;justify-items:end;align-content:start;border-right:2px solid var(--grid-line-thick);padding-right:3px} .clue-row{display:flex;flex-direction:row;justify-content:flex-end;align-items:center;height:var(--cell-size);font-weight:bold;color:var(--text-color);font-size:calc(var(--cell-size)*0.55);gap:4px;padding-right:2px} .completed{opacity:0.3;text-decoration:line-through} .nono-grid{display:grid;gap:1px;background:var(--grid-line);border:2px solid var(--grid-line-thick)} .nono-cell{width:var(--cell-size);height:var(--cell-size);background:var(--cell-bg);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative} .nono-grid.size-10 .nono-cell:nth-child(5n),.nono-grid.size-15 .nono-cell:nth-child(5n){border-right:1px solid var(--grid-line-thick)} .nono-grid.size-10 .nono-cell:nth-child(10n),.nono-grid.size-15 .nono-cell:nth-child(15n){border-right:none} .nono-cell.filled{background:var(--point-color);box-shadow:inset 0 0 5px rgba(0,0,0,0.1)} .nono-cell.marked-x::after{content:'✕';color:rgba(0,0,0,0.3);font-size:calc(var(--cell-size)*0.7);pointer-events:none}
+        #pipe-board{display:grid;background:#e2e8f0;padding:5px;border-radius:15px;border:4px solid #cbd5e1;margin:0 auto;gap:2px} .pipe-cell{width:var(--pipe-size);height:var(--pipe-size);background:var(--pipe-bg);border-radius:8px;position:relative;cursor:pointer;transition:transform 0.1s;display:flex;justify-content:center;align-items:center} .pipe-cell:active{transform:scale(0.95)} .pipe-center{width:40%;height:40%;background:var(--pipe-color);border-radius:50%;z-index:2;transition:background 0.3s} .pipe-arm{position:absolute;background:var(--pipe-color);z-index:1;transition:background 0.3s} .arm-0{top:0;left:35%;width:30%;height:50%} .arm-1{top:35%;right:0;width:50%;height:30%} .arm-2{bottom:0;left:35%;width:30%;height:50%} .arm-3{top:35%;left:0;width:50%;height:30%} .pipe-active .pipe-center,.pipe-active .pipe-arm{background:var(--pipe-active);box-shadow:0 0 8px var(--pipe-active);animation:waterFlow 1.5s infinite alternate} @keyframes waterFlow{from{filter:brightness(1)} to{filter:brightness(1.2)}} .is-start{border:2px solid #0284c7;background:#e0f2fe} .is-start::after{content:'S';position:absolute;font-size:12px;top:2px;left:2px;color:#0284c7;font-weight:bold;z-index:5} .is-end{border:2px solid #e11d48;background:#ffe4e6} .is-end::after{content:'E';position:absolute;font-size:12px;bottom:2px;right:2px;color:#e11d48;font-weight:bold;z-index:5}
+        .g2048-board{display:grid;background:#bbada0;padding:10px;border-radius:15px;gap:8px;margin:0 auto;touch-action:none;box-shadow:inset 0 0 10px rgba(0,0,0,0.1);border:4px solid #a39485} .g2048-score-box{background:#779ECB;color:white;padding:10px 20px;border-radius:15px;font-size:1.3rem;margin-bottom:15px;display:inline-block} .g2048-tile{width:var(--tile-size);height:var(--tile-size);background:rgba(238,228,218,0.35);border-radius:10px;display:flex;justify-content:center;align-items:center;font-size:2rem;font-weight:bold;color:#776e65;transition:transform 0.1s} .tile-2{background:#eee4da} .tile-4{background:#ede0c8} .tile-8{background:#f2b179;color:#f9f6f2} .tile-16{background:#f59563;color:#f9f6f2} .tile-32{background:#f67c5f;color:#f9f6f2} .tile-64{background:#f65e3b;color:#f9f6f2} .tile-128{background:#edcf72;color:#f9f6f2;font-size:1.6rem} .tile-256{background:#edcc61;color:#f9f6f2;font-size:1.6rem} .tile-512{background:#edc850;color:#f9f6f2;font-size:1.6rem} .tile-1024{background:#edc53f;color:#f9f6f2;font-size:1.3rem} .tile-2048{background:#edc22e;color:#f9f6f2;font-size:1.3rem;box-shadow:0 0 20px rgba(237,194,46,0.8)}
+        .mine-board{display:grid;background:#e0e0e0;border:3px solid #ccc;padding:3px;border-radius:10px;gap:1px;margin:0 auto;box-shadow:inset 0 0 5px rgba(0,0,0,0.1)} .mine-cell{width:var(--mine-cell-size);height:var(--mine-cell-size);background:#ffffff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;font-weight:bold;transition:background 0.1s;position:relative;box-shadow:inset -2px -2px 0px rgba(0,0,0,0.1)} .mine-cell:active{box-shadow:none;background:#f5f5f5} .mine-cell.revealed{background:#f0f0f0;box-shadow:inset 1px 1px 3px rgba(0,0,0,0.05);cursor:default} .mine-cell.mine{background:#ffcdd2} .mine-cell.flagged{font-size:0.9rem} .val-1{color:var(--num-1)} .val-2{color:var(--num-2)} .val-3{color:var(--num-3)} .val-4{color:var(--num-4)} .val-5{color:var(--num-5)} .val-6{color:var(--num-6)} .val-7{color:var(--num-7)} .val-8{color:var(--num-8)} .mine-info{font-family:'Jua',sans-serif;font-size:1.2rem;margin-bottom:10px;color:#d32f2f;background:#ffebee;padding:5px 15px;border-radius:15px;display:inline-block} @keyframes shake{0%{transform:translate(1px,1px) rotate(0deg)} 10%{transform:translate(-1px,-2px) rotate(-1deg)} 20%{transform:translate(-3px,0px) rotate(1deg)} 30%{transform:translate(3px,2px) rotate(0deg)} 40%{transform:translate(1px,-1px) rotate(1deg)} 50%{transform:translate(-1px,2px) rotate(-1deg)} 60%{transform:translate(-3px,1px) rotate(0deg)} 70%{transform:translate(3px,1px) rotate(-1deg)} 80%{transform:translate(-1px,-1px) rotate(1deg)} 90%{transform:translate(1px,2px) rotate(0deg)} 100%{transform:translate(1px,-2px) rotate(-1deg)}} .shake-effect{animation:shake 0.5s}
+    </style>
+</head>
+<body>
+
+    <!-- 0. 로그인 -->
+    <div id="login-screen">
+        <h1 style="margin-bottom: 30px; color: #5d4037;">🏫 미니게임천국</h1>
+        <input type="text" id="user-input" placeholder="학번+이름 (예: 5901식이)" maxlength="10">
+        <button class="btn-primary" onclick="handleLogin()">입장하기! ✨</button>
+    </div>
+
+    <!-- 1. 포털 -->
+    <div id="portal-container" class="container hidden">
+        <button id="logout-btn" onclick="handleLogout()">X</button>
+        <div id="header">
+            <div class="info-box"><span class="info-label">환영해!</span><span class="info-value" id="display-name">-</span></div>
+            <div class="info-box"><span class="info-label">이번 달 총점</span><span class="info-value" id="display-score">0 🌟</span></div>
+            <div class="info-box"><span class="info-label">스킵 티켓</span><span class="info-value" id="display-tickets">🎟️ 3장</span></div>
+        </div>
+        
+        <div id="game-grid">
+            <div class="game-card" onclick="openGame('nono')"><span class="game-icon">🧩</span><span class="game-title">네모네모</span></div>
+            <div class="game-card" onclick="openGame('pipe')"><span class="game-icon">🛠️</span><span class="game-title">배관공</span></div>
+            <div class="game-card" onclick="openGame('g2048')"><span class="game-icon">🔢</span><span class="game-title">2048</span></div>
+            <div class="game-card" onclick="openGame('mine')"><span class="game-icon">💣</span><span class="game-title">지뢰찾기</span></div>
+        </div>
+
+        <div id="ranking-box">
+            <div id="ranking-title">🏆 이번 달 랭킹 (Top 5)</div>
+            <ul class="ranking-list" id="top5-list"></ul>
+            <div style="display: flex; margin-top: 15px; justify-content: space-between;">
+                <button class="btn-half btn-blue" onclick="openModal('current')">전체 순위 👑</button>
+                <button class="btn-half btn-gold" onclick="openModal('history')">명예의 전당 🏛️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전체 랭킹 모달 -->
+    <div id="modal-overlay">
+        <div id="modal-content">
+            <button id="close-modal" onclick="closeModal()">×</button>
+            <h2 id="modal-title" style="margin-top: 0; color: #5d4037;">📜 랭킹 </h2>
+            <select id="season-select" class="hidden" onchange="fetchHistoryRanking()"></select>
+            <div id="full-ranking-scroll">
+                <ul class="ranking-list" id="full-ranking-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 네모네모 로직 -->
+    <div id="nono-container" class="container hidden">
+        <div class="top-bar">
+            <button class="btn-back" onclick="backToPortal()">◀ 포털로</button>
+            <h2 style="margin:0; font-size:1.3rem;">🧩 네모네모</h2>
+            <div style="font-size:0.9rem;">티켓: <span class="ticket-view">3</span>장</div>
+        </div>
+        <div id="nono-diff-screen">
+            <div class="season-limit-box">
+                시즌 최대 점수: <span id="nono-season-score">0</span> / 1000
+                <div class="progress-bar-bg"><div id="nono-progress" class="progress-bar-fill"></div></div>
+            </div>
+            <button class="diff-btn" onclick="checkNonoSaveAndStart(5, 10)"><span>🌱 초급 (5x5)</span> <span>+10점</span></button>
+            <button class="diff-btn b" onclick="checkNonoSaveAndStart(10, 30)"><span>🌿 중급 (10x10)</span> <span>+30점</span></button>
+            <button class="diff-btn c" onclick="checkNonoSaveAndStart(15, 100)"><span>🌲 고급 (15x15)</span> <span>+100점</span></button>
+        </div>
+        <div id="nono-play-screen" class="hidden">
+            <div class="tools-bar"><button class="tool-btn active" id="tool-pencil" onclick="setNonoTool('pencil')">✏️ 칠하기</button><button class="tool-btn" id="tool-cross" onclick="setNonoTool('cross')">❌ X표시</button><button class="tool-btn tool-giveup" onclick="giveUpNonoGame()">🏳️ 포기(티켓-1)</button></div>
+            <div class="nono-wrapper"><div class="nono-layout" id="nono-layout-board"><div style="background:transparent;"></div><div class="nono-clues-top" id="nono-col-clues"></div><div class="nono-clues-left" id="nono-row-clues"></div><div class="nono-grid" id="nono-board"></div></div></div>
+        </div>
+    </div>
+
+    <!-- 3. 파스텔 배관공 -->
+    <div id="pipe-container" class="container hidden">
+        <div class="top-bar">
+            <button class="btn-back" onclick="backToPortal()">◀ 포털로</button>
+            <h2 style="margin:0; font-size:1.3rem;">🛠️ 파스텔 배관공</h2>
+            <div style="font-size:0.9rem;">티켓: <span class="ticket-view">3</span>장</div>
+        </div>
+        <div id="pipe-diff-screen">
+            <div class="season-limit-box" style="background:#e8f5e9; border-color:#66bb6a; color:#2e7d32;">
+                시즌 최대 점수: <span id="pipe-season-score">0</span> / 1000
+                <div class="progress-bar-bg"><div id="pipe-progress" class="progress-bar-fill" style="background-color:#66bb6a;"></div></div>
+            </div>
+            <button class="diff-btn b" onclick="checkPipeSaveAndStart(4, 5)"><span>🌿 초급 (4x4)</span> <span>+5점</span></button>
+            <button class="diff-btn c" onclick="checkPipeSaveAndStart(5, 10)"><span>🌳 중급 (5x5)</span> <span>+10점</span></button>
+            <button class="diff-btn d" onclick="checkPipeSaveAndStart(6, 20)"><span>🌲 고급 (6x6)</span> <span>+20점</span></button>
+        </div>
+        <div id="pipe-play-screen" class="hidden">
+            <div class="tools-bar"><button class="btn-primary" style="flex:1;" onclick="checkPipeConnection()">물 틀기! 💧</button><button class="tool-btn tool-giveup" onclick="giveUpPipeGame()">🏳️ 포기(티켓-1)</button></div>
+            <div id="pipe-board"></div>
+        </div>
+    </div>
+
+    <!-- 4. 2048 게임 -->
+    <div id="g2048-container" class="container hidden">
+        <div class="top-bar">
+            <button class="btn-back" onclick="backToPortal()">◀ 포털로</button>
+            <h2 style="margin:0; font-size:1.3rem;">🔢 파스텔 2048</h2>
+            <div style="font-size:0.9rem;">티켓: <span class="ticket-view">3</span>장</div>
+        </div>
+        <div id="g2048-diff-screen">
+            <div class="season-limit-box" style="background:#fff3e0; border-color:#ffa726; color:#e65100;">
+                시즌 최대 점수: <span id="g2048-season-score">0</span> / 1000
+                <div class="progress-bar-bg"><div id="g2048-progress" class="progress-bar-fill" style="background-color:#ffa726;"></div></div>
+            </div>
+            <button class="diff-btn" onclick="checkG2048SaveAndStart(5, 10)"><span>🌱 Easy (5x5)</span> <span>+10점</span></button>
+            <button class="diff-btn b" onclick="checkG2048SaveAndStart(4, 30)"><span>🌿 Normal (4x4)</span> <span>+30점</span></button>
+            <button class="diff-btn c" onclick="checkG2048SaveAndStart(3, 100)"><span>🔥 Hard (3x3)</span> <span>+100점</span></button>
+        </div>
+        <div id="g2048-play-screen" class="hidden">
+            <div class="g2048-score-box">현재 보드 점수: <span id="g2048-score-view" style="font-weight:bold; color:#fff9c4;">0</span></div>
+            <div id="g2048-board" class="g2048-board"></div>
+            <p style="text-align:center; color:#8d6e63; margin-top:15px; font-size: 1rem;">👆 스와이프로 2048을 만드세요!</p>
+            <div class="tools-bar"><button class="tool-btn tool-giveup" onclick="giveUpG2048Game()">🏳️ 꼬였다! 포기(티켓-1)</button></div>
+        </div>
+    </div>
+
+    <!-- 5. 지뢰찾기 -->
+    <div id="mine-container" class="container hidden">
+        <div class="top-bar">
+            <button class="btn-back" onclick="backToPortal()">◀ 포털로</button>
+            <h2 style="margin:0; font-size:1.3rem;">💣 지뢰찾기</h2>
+            <div style="font-size:0.9rem;">티켓: <span class="ticket-view">3</span>장</div>
+        </div>
+        <div id="mine-diff-screen">
+            <div class="season-limit-box" style="background:#ffebee; border-color:#ef5350; color:#c62828;">
+                시즌 최대 점수: <span id="mine-season-score">0</span> / 1000
+                <div class="progress-bar-bg"><div id="mine-progress" class="progress-bar-fill" style="background-color:#ef5350;"></div></div>
+            </div>
+            <button class="diff-btn" onclick="checkMineSaveAndStart(9, 10, 10)"><span>🌱 쉬움 (9x9)</span> <span>+10점</span></button>
+            <button class="diff-btn b" onclick="checkMineSaveAndStart(12, 20, 30)"><span>🌿 보통 (12x12)</span> <span>+30점</span></button>
+            <button class="diff-btn c" onclick="checkMineSaveAndStart(15, 40, 50)"><span>🌲 어려움 (15x15)</span> <span>+50점</span></button>
+        </div>
+        <div id="mine-play-screen" class="hidden">
+            <div class="mine-info">남은 지뢰: <span id="mines-left-view" style="font-weight:bold;">0</span>개</div>
+            <div id="mine-board" class="mine-board"></div>
+            <div class="tools-bar"><button class="tool-btn active" id="tool-mine-shovel" onclick="setMineTool('shovel')">⛏️ 땅파기</button><button class="tool-btn" id="tool-mine-flag" onclick="setMineTool('flag')">🚩 깃발꽂기</button><button class="tool-btn tool-giveup" onclick="giveUpMineGame()">🏳️ 포기(티켓-1)</button></div>
+            <p style="text-align:center; color:#8d6e63; font-size: 0.9rem; margin-top:5px;">※ 우클릭 또는 꾹 누르면 깃발!</p>
+        </div>
+    </div>
+
+    <div id="loading-overlay"><div class="spinner"></div><span id="loading-text">데이터 처리 중...</span></div>
+
+    <script>
+        /* ==================================================
+           [1] 통합 시스템 & 1000점 상한제 로직
+        ================================================== */
+        const API_URL = "https://script.google.com/macros/s/AKfycbwSUJOP66QNyufzVH95tdOt9ZGHvNdOYQFZenSsUhPeaQfImxa4XKaFd0Dqig6dW9Fi/exec";
+        const MAX_SCORE_PER_GAME = 1000;
+        
+        let currentUser = { name: "", score: 0, tickets: 3, nonoScore: 0, pipeScore: 0, g2048Score: 0, mineScore: 0 };
+
+        window.onload = () => { const savedName = localStorage.getItem('mgp_user_name'); if (savedName) loginUser(savedName); };
+        function showLoading(msg) { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+        function handleLogin() { const name = document.getElementById('user-input').value.trim(); if (name.length < 2) { alert("학번과 이름을 정확히 입력해줘!"); return; } loginUser(name); }
+
+        async function loginUser(name) {
+            localStorage.setItem('mgp_user_name', name); showLoading("서버 연결 중... 📡");
+            try {
+                const response = await fetch(`${API_URL}?action=getUser&name=${encodeURIComponent(name)}`);
+                const data = await response.json();
+                currentUser = { 
+                    name: data.name, score: parseInt(data.score) || 0, tickets: parseInt(data.tickets) || 0,
+                    nonoScore: parseInt(data.nonoScore) || 0, pipeScore: parseInt(data.pipeScore) || 0,
+                    g2048Score: parseInt(data.g2048Score) || 0, mineScore: parseInt(data.mineScore) || 0
+                };
+                if (data.isNew || currentUser.tickets === 0 && currentUser.score === 0) currentUser.tickets = 3;
+                document.getElementById('display-name').innerText = currentUser.name;
+                updatePortalUI(); await fetchCurrentRanking(); hideLoading();
+                document.getElementById('login-screen').classList.add('hidden'); document.getElementById('portal-container').classList.remove('hidden');
+            } catch (error) { alert("서버 통신 실패."); hideLoading(); }
+        }
+
+        function handleLogout() { if(confirm("로그아웃 할거야?")) { localStorage.removeItem('mgp_user_name'); location.reload(); } }
+
+        async function saveUserData() {
+            updatePortalUI();
+            try { await fetch(API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(currentUser) }); fetchCurrentRanking(); } catch (error) { console.error("저장 실패"); }
+        }
+
+        function updatePortalUI() {
+            document.getElementById('display-score').innerText = currentUser.score.toLocaleString() + " 🌟";
+            document.getElementById('display-tickets').innerText = `🎟️ ${currentUser.tickets}장`;
+            document.querySelectorAll('.ticket-view').forEach(el => el.innerText = currentUser.tickets);
+            
+            // 각 게임별 진행률 바 업데이트
+            ['nono', 'pipe', 'g2048', 'mine'].forEach(game => {
+                const s = currentUser[game + 'Score'];
+                document.getElementById(`${game}-season-score`).innerText = s;
+                document.getElementById(`${game}-progress`).style.width = `${Math.min((s/MAX_SCORE_PER_GAME)*100, 100)}%`;
+            });
+        }
+
+        // 공통 게임 승리 처리 (상한제 1000점 적용)
+        function handleGameWin(pts, gameType, specialMsg = null) {
+            let currentScore = currentUser[gameType + 'Score'] || 0;
+            
+            // 1. 이미 1000점에 도달한 경우 (점수 미지급, 자유 플레이 안내)
+            if (currentScore >= MAX_SCORE_PER_GAME) {
+                setTimeout(() => { 
+                    alert(`🎉 대단해요!\n(이번 시즌 ${MAX_SCORE_PER_GAME}점을 모두 달성하여 점수는 오르지 않고 자유 플레이로 진행됩니다!)`); 
+                }, 400);
+                return;
+            }
+
+            // 2. 점수 지급 (1000점을 넘지 않도록 제한)
+            let pointsToAdd = Math.min(pts, MAX_SCORE_PER_GAME - currentScore);
+            currentUser[gameType + 'Score'] += pointsToAdd;
+            currentUser.score += pointsToAdd;
+            if(currentUser.tickets < 5) currentUser.tickets += 1; 
+            
+            saveUserData();
+            
+            setTimeout(() => { 
+                if(specialMsg) alert(`${specialMsg}\n+${pointsToAdd}점 획득! (티켓 1장 충전)`);
+                else alert(`🎉 클리어 완료!\n+${pointsToAdd}점 획득! (티켓 1장 충전)`); 
+            }, 400);
+        }
+
+        function checkAndConsumeTicket(callback) {
+            if(currentUser.tickets <= 0) { alert("포기 티켓이 부족해. 다른 게임을 클리어해서 티켓을 모아와!"); return; }
+            if(confirm("티켓을 1장 사용해서 이 문제를 포기하고 새 문제를 받을까?")) { currentUser.tickets -= 1; saveUserData(); callback(); }
+        }
+
+        /* 랭킹 불러오기 */
+        let currentRankData = [];
+        async function fetchCurrentRanking() {
+            try { const response = await fetch(`${API_URL}?action=getRanking`); currentRankData = await response.json(); renderTop5(currentRankData); } catch (e) { }
+        }
+        function renderTop5(data) {
+            const container = document.getElementById('top5-list'); container.innerHTML = '';
+            for(let i=0; i<Math.min(5, data.length); i++) {
+                let rankVisual = i + 1; if(i === 0) rankVisual = '🥇'; else if(i === 1) rankVisual = '🥈'; else if(i === 2) rankVisual = '🥉';
+                container.innerHTML += `<li><div><span class="rank-num">${rankVisual}</span> ${data[i].name}</div><span class="rank-score">${data[i].score.toLocaleString()}🌟</span></li>`;
+            }
+            if(data.length === 0) container.innerHTML = `<li><div style="color:#aaa; text-align:center; width:100%;">아직 점수를 올린 사람이 없어!</div></li>`;
+        }
+
+        /* 모달 제어 */
+        const modalOverlay = document.getElementById('modal-overlay');
+        function closeModal() { modalOverlay.style.display = 'none'; }
+        modalOverlay.addEventListener('click', function(e) { if(e.target === modalOverlay) closeModal(); });
+
+        async function openModal(type) {
+            modalOverlay.style.display = 'flex'; const selectBox = document.getElementById('season-select');
+            if (type === 'current') { document.getElementById('modal-title').innerText = "📜 이번 달 전체 랭킹"; selectBox.classList.add('hidden'); renderModalList(currentRankData); } 
+            else if (type === 'history') {
+                document.getElementById('modal-title').innerText = "🏛️ 명예의 전당"; selectBox.classList.remove('hidden'); document.getElementById('full-ranking-list').innerHTML = `<li style="justify-content:center; color:#999;">시즌 데이터를 불러오는 중...</li>`;
+                try {
+                    const response = await fetch(`${API_URL}?action=getSeasons`); const seasons = await response.json();
+                    if (seasons.length === 0) { selectBox.classList.add('hidden'); document.getElementById('full-ranking-list').innerHTML = `<li style="justify-content:center; color:#e57373;">아직 마감된 지난 시즌이 없어요!</li>`; return; }
+                    selectBox.innerHTML = ''; seasons.forEach(s => { const option = document.createElement('option'); option.value = s; option.text = s + " 시즌"; selectBox.appendChild(option); });
+                    fetchHistoryRanking();
+                } catch (e) { document.getElementById('full-ranking-list').innerHTML = `<li style="justify-content:center; color:#e57373;">불러오기 실패!</li>`; }
+            }
+        }
+        async function fetchHistoryRanking() {
+            const season = document.getElementById('season-select').value; document.getElementById('full-ranking-list').innerHTML = `<li style="justify-content:center; color:#999;">${season} 기록을 찾는 중...</li>`;
+            try { const response = await fetch(`${API_URL}?action=getHistoryRanking&season=${encodeURIComponent(season)}`); const data = await response.json(); renderModalList(data); } catch (e) { }
+        }
+        function renderModalList(data) {
+            const container = document.getElementById('full-ranking-list'); container.innerHTML = '';
+            if(data.length === 0) { container.innerHTML = `<li><div style="color:#aaa; text-align:center; width:100%;">기록이 없습니다.</div></li>`; return; }
+            data.forEach((r, i) => {
+                let v = i + 1; if(i === 0) v = '🥇'; else if(i === 1) v = '🥈'; else if(i === 2) v = '🥉';
+                container.innerHTML += `<li><div><span class="rank-num">${v}</span> ${r.name}</div><span class="rank-score">${r.score.toLocaleString()}🌟</span></li>`;
+            });
+        }
+
+        /* 화면 네비게이션 */
+        function openGame(type) {
+            document.getElementById('portal-container').classList.add('hidden');
+            document.getElementById(`${type}-container`).classList.remove('hidden');
+            document.getElementById(`${type}-diff-screen`).classList.remove('hidden');
+            document.getElementById(`${type}-play-screen`).classList.add('hidden');
+        }
+        function backToPortal() { 
+            ['nono', 'pipe', 'g2048', 'mine'].forEach(t => document.getElementById(`${t}-container`).classList.add('hidden'));
+            document.getElementById('portal-container').classList.remove('hidden'); updatePortalUI(); 
+        }
+
+        /* ==================================================
+           [2] 네모네모 로직 로직
+        ================================================== */
+        let NONO_STATE = { isPlaying: false, size: 5, targetGrid: [], playerGrid: [], rowClues: [], colClues: [], tool: 'pencil', rewardPts: 0 };
+        function getNonoClues(line) { const clues = []; let count = 0; for (let i = 0; i < line.length; i++) { if (line[i] === 1) count++; else if (count > 0) { clues.push(count); count = 0; } } if (count > 0) clues.push(count); return clues.length === 0 ? [0] : clues; }
+        function getNonoPerms(length, clues) { if (clues.length === 1 && clues[0] === 0) return [Array(length).fill(0)]; const perms = []; const solve = (idx, clueIdx, currentPerm) => { if (clueIdx === clues.length) { const finalPerm = [...currentPerm]; for(let i=idx; i<length; i++) finalPerm.push(0); perms.push(finalPerm); return; } let restCluesLength = 0; for(let i=clueIdx+1; i<clues.length; i++) restCluesLength += clues[i] + 1; const maxStart = length - restCluesLength - clues[clueIdx]; for (let start = idx; start <= maxStart; start++) { const nextPerm = [...currentPerm]; for(let i=idx; i<start; i++) nextPerm.push(0); for(let i=0; i<clues[clueIdx]; i++) nextPerm.push(1); if (clueIdx < clues.length - 1) nextPerm.push(0); solve(start + clues[clueIdx] + (clueIdx < clues.length - 1 ? 1 : 0), clueIdx + 1, nextPerm); } }; solve(0, 0, []); return perms; }
+        function isNonoSolvable(size, rowClues, colClues) { const grid = Array(size).fill(0).map(() => Array(size).fill(-1)); let changed = true, iterations = 0; const rowPerms = rowClues.map(c => getNonoPerms(size, c)); const colPerms = colClues.map(c => getNonoPerms(size, c)); while (changed && iterations < 15) { changed = false; iterations++; for (let r = 0; r < size; r++) { const valid = rowPerms[r].filter(p => p.every((val, c) => grid[r][c] === -1 || grid[r][c] === val)); rowPerms[r] = valid; if (valid.length === 0) return false; for (let c = 0; c < size; c++) { if (grid[r][c] !== -1) continue; const firstVal = valid[0][c]; if (valid.every(p => p[c] === firstVal)) { grid[r][c] = firstVal; changed = true; } } } for (let c = 0; c < size; c++) { const valid = colPerms[c].filter(p => p.every((val, r) => grid[r][c] === -1 || grid[r][c] === val)); colPerms[c] = valid; if (valid.length === 0) return false; for (let r = 0; r < size; r++) { if (grid[r][c] !== -1) continue; const firstVal = valid[0][r]; if (valid.every(p => p[r] === firstVal)) { grid[r][c] = firstVal; changed = true; } } } } return grid.every(row => row.every(cell => cell !== -1)); }
+        function generateNonoLevel(size, callback) { const density = size === 5 ? 0.6 : (size === 10 ? 0.55 : 0.5); let attempts = 0; function tryGenerate() { for(let i=0; i<5; i++) { attempts++; const tempGrid = Array(size).fill(0).map(() => Array(size).fill(0).map(() => Math.random() < density ? 1 : 0)); for(let r=0; r<size; r++) if(tempGrid[r].every(v=>v===0)) tempGrid[r][Math.floor(Math.random()*size)] = 1; for(let c=0; c<size; c++) if(tempGrid.every(row=>row[c]===0)) tempGrid[Math.floor(Math.random()*size)][c] = 1; const rClues = tempGrid.map(row => getNonoClues(row)); const cClues = []; for(let c=0; c<size; c++) cClues.push(getNonoClues(tempGrid.map(row => row[c]))); if (isNonoSolvable(size, rClues, cClues)) { callback({ grid: tempGrid, rowClues: rClues, colClues: cClues }); return; } } if (attempts < 50) setTimeout(tryGenerate, 10); else { const fallbackGrid = Array(size).fill(0).map((_,r) => Array(size).fill(0).map((_,c) => (r===Math.floor(size/2) || c===Math.floor(size/2)) ? 1 : 0)); callback({ grid: fallbackGrid, rowClues: fallbackGrid.map(row=>getNonoClues(row)), colClues: fallbackGrid[0].map((_,c)=>getNonoClues(fallbackGrid.map(row=>row[c]))) }); } } tryGenerate(); }
+        
+        function checkNonoSaveAndStart(size, points) { const saveKey = 'mgp_nono_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if (saved) { const parsed = JSON.parse(saved); if (parsed.size === size && confirm("이전에 풀다 만 로직이 있어! 이어서 할래?")) { NONO_STATE = parsed; NONO_STATE.rewardPts = points; renderNonoScreen(); return; } } showLoading("퍼즐 생성 중... 🧩"); generateNonoLevel(size, (data) => { NONO_STATE.size = size; NONO_STATE.rewardPts = points; NONO_STATE.targetGrid = data.grid; NONO_STATE.rowClues = data.rowClues; NONO_STATE.colClues = data.colClues; NONO_STATE.playerGrid = Array(size).fill(0).map(() => Array(size).fill(0)); NONO_STATE.isPlaying = true; hideLoading(); renderNonoScreen(); saveNonoProgress(); }); }
+        function renderNonoScreen() { document.getElementById('nono-diff-screen').classList.add('hidden'); document.getElementById('nono-play-screen').classList.remove('hidden'); setNonoTool('pencil'); const maxW = Math.min(window.innerWidth - 40, 400); const s = NONO_STATE.size; let cssS = Math.floor(maxW / (s + Math.ceil(s / 2))); if(cssS > 30) cssS = 30; if(cssS < 12) cssS = 12; document.documentElement.style.setProperty('--cell-size', `${cssS}px`); const b = document.getElementById('nono-board'); b.className = `nono-grid size-${s}`; b.style.gridTemplateColumns = `repeat(${s}, var(--cell-size))`; b.innerHTML = ''; const rContainer = document.getElementById('nono-row-clues'); rContainer.innerHTML = ''; rContainer.style.gridTemplateRows = `repeat(${s}, var(--cell-size))`; NONO_STATE.rowClues.forEach(clues => { const el = document.createElement('div'); el.className = 'clue-row'; el.innerHTML = clues.map(c => `<span>${c}</span>`).join(''); rContainer.appendChild(el); }); const cContainer = document.getElementById('nono-col-clues'); cContainer.innerHTML = ''; cContainer.style.gridTemplateColumns = `repeat(${s}, var(--cell-size))`; NONO_STATE.colClues.forEach(clues => { const el = document.createElement('div'); el.className = 'clue-col'; el.innerHTML = clues.map(c => `<span>${c}</span>`).join(''); cContainer.appendChild(el); }); for(let r=0; r<s; r++) { for(let c=0; c<s; c++) { const el = document.createElement('div'); el.className = 'nono-cell'; const state = NONO_STATE.playerGrid[r][c]; if (state === 1) el.classList.add('filled'); else if (state === 2) el.classList.add('marked-x'); el.onclick = () => handleNonoClick(r, c, false); el.oncontextmenu = (e) => { e.preventDefault(); handleNonoClick(r, c, true); }; b.appendChild(el); } } checkNonoClues(); }
+        function handleNonoClick(r, c, isRightClick) { if(!NONO_STATE.isPlaying) return; const targetVal = (isRightClick ? 'cross' : NONO_STATE.tool) === 'pencil' ? 1 : 2; NONO_STATE.playerGrid[r][c] = NONO_STATE.playerGrid[r][c] === targetVal ? 0 : targetVal; renderNonoScreen(); saveNonoProgress(); checkNonoWin(); }
+        function checkNonoClues() { const s = NONO_STATE.size; const rCh = document.getElementById('nono-row-clues').children; const cCh = document.getElementById('nono-col-clues').children; for(let r=0; r<s; r++) { const cur = getNonoClues(NONO_STATE.playerGrid[r].map(v => v===1?1:0)); Array.from(rCh[r].children).forEach(sp => JSON.stringify(cur) === JSON.stringify(NONO_STATE.rowClues[r]) ? sp.classList.add('completed') : sp.classList.remove('completed')); } for(let c=0; c<s; c++) { const col = []; for(let r=0; r<s; r++) col.push(NONO_STATE.playerGrid[r][c]===1?1:0); const cur = getNonoClues(col); Array.from(cCh[c].children).forEach(sp => JSON.stringify(cur) === JSON.stringify(NONO_STATE.colClues[c]) ? sp.classList.add('completed') : sp.classList.remove('completed')); } }
+        function setNonoTool(t) { NONO_STATE.tool = t; document.getElementById('tool-pencil').classList.remove('active'); document.getElementById('tool-cross').classList.remove('active'); document.getElementById('tool-' + t).classList.add('active'); }
+        function saveNonoProgress() { localStorage.setItem('mgp_nono_save_' + currentUser.name, JSON.stringify(NONO_STATE)); }
+        function checkNonoWin() { let isWin = true; const s = NONO_STATE.size; for(let r=0; r<s; r++) for(let c=0; c<s; c++) { if (NONO_STATE.targetGrid[r][c] === 1 && NONO_STATE.playerGrid[r][c] !== 1) isWin = false; if (NONO_STATE.targetGrid[r][c] === 0 && NONO_STATE.playerGrid[r][c] === 1) isWin = false; } if(isWin) { NONO_STATE.isPlaying = false; localStorage.removeItem('mgp_nono_save_' + currentUser.name); for(let r=0; r<s; r++) for(let c=0; c<s; c++) if(NONO_STATE.targetGrid[r][c] === 0) NONO_STATE.playerGrid[r][c] = 2; renderNonoScreen(); handleGameWin(NONO_STATE.rewardPts, 'nono'); setTimeout(() => { document.getElementById('nono-play-screen').classList.add('hidden'); document.getElementById('nono-diff-screen').classList.remove('hidden'); }, 1500); } }
+        function giveUpNonoGame() { checkAndConsumeTicket(() => { localStorage.removeItem('mgp_nono_save_' + currentUser.name); checkNonoSaveAndStart(NONO_STATE.size, NONO_STATE.rewardPts); }); }
+
+        /* ==================================================
+           [3] 배관공 로직
+        ================================================== */
+        const PIPE_TYPES = [ { type: 'I', connect: [1, 0, 1, 0] }, { type: 'L', connect: [1, 1, 0, 0] } ];
+        let PIPE_STATE = { isPlaying: false, size: 5, grid: [], rewardPts: 0 };
+        function checkPipeSaveAndStart(size, points) { const saveKey = 'mgp_pipe_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if (saved) { const parsed = JSON.parse(saved); if (parsed.size === size && confirm("이전에 풀다 만 파이프가 있어! 이어서 할래?")) { PIPE_STATE = parsed; PIPE_STATE.rewardPts = points; renderPipeScreen(); return; } } showLoading("배관 배치 중... 🔧"); setTimeout(() => { generatePipeLevel(size); PIPE_STATE.size = size; PIPE_STATE.rewardPts = points; PIPE_STATE.isPlaying = true; hideLoading(); renderPipeScreen(); savePipeProgress(); }, 300); }
+        function generatePipeLevel(size) { const grid = []; for (let r = 0; r < size; r++) { grid[r] = []; for (let c = 0; c < size; c++) { const rp = PIPE_TYPES[Math.floor(Math.random() * PIPE_TYPES.length)]; grid[r][c] = { r, c, type: rp.type, rotation: Math.floor(Math.random() * 4), baseConnect: [...rp.connect], isStart: (r === 0 && c === 0), isEnd: (r === size-1 && c === size-1) }; } } PIPE_STATE.grid = grid; }
+        function renderPipeScreen() { document.getElementById('pipe-diff-screen').classList.add('hidden'); document.getElementById('pipe-play-screen').classList.remove('hidden'); const size = PIPE_STATE.size; const maxW = Math.min(window.innerWidth - 60, 400); document.documentElement.style.setProperty('--pipe-size', `${Math.floor(maxW / size)}px`); const board = document.getElementById('pipe-board'); board.style.gridTemplateColumns = `repeat(${size}, 1fr)`; board.innerHTML = ''; for (let r = 0; r < size; r++) { for (let c = 0; c < size; c++) { const pipe = PIPE_STATE.grid[r][c]; const el = document.createElement('div'); el.className = `pipe-cell ${pipe.isStart ? 'is-start' : ''} ${pipe.isEnd ? 'is-end' : ''}`; el.id = `pipe-${r}-${c}`; const center = document.createElement('div'); center.className = 'pipe-center'; el.appendChild(center); drawPipeArms(el, pipe); el.onclick = () => { if(!PIPE_STATE.isPlaying) return; pipe.rotation = (pipe.rotation + 1) % 4; drawPipeArms(el, pipe); savePipeProgress(); document.querySelectorAll('.pipe-cell').forEach(cell => cell.classList.remove('pipe-active')); }; board.appendChild(el); } } }
+        function drawPipeArms(el, pipe) { el.querySelectorAll('.pipe-arm').forEach(arm => arm.remove()); const actualConn = getActualConnections(pipe); for(let i=0; i<4; i++) { if(actualConn[i] === 1) { const arm = document.createElement('div'); arm.className = `pipe-arm arm-${i}`; el.appendChild(arm); } } }
+        function getActualConnections(pipe) { let conn = [...pipe.baseConnect]; for(let i=0; i<pipe.rotation; i++) conn.unshift(conn.pop()); return conn; }
+        function savePipeProgress() { localStorage.setItem('mgp_pipe_save_' + currentUser.name, JSON.stringify(PIPE_STATE)); }
+        function checkPipeConnection() { if(!PIPE_STATE.isPlaying) return; const size = PIPE_STATE.size; const grid = PIPE_STATE.grid; document.querySelectorAll('.pipe-cell').forEach(el => el.classList.remove('pipe-active')); const queue = [[0, 0]]; const visited = new Set(['0-0']); const activePipes = [[0, 0]]; while (queue.length > 0) { const [r, c] = queue.shift(); const currentConn = getActualConnections(grid[r][c]); const directions = [[-1, 0, 0, 2], [0, 1, 1, 3], [1, 0, 2, 0], [0, -1, 3, 1]]; directions.forEach(([dr, dc, outDir, inDir]) => { const nr = r + dr, nc = c + dc; if (nr >= 0 && nr < size && nc >= 0 && nc < size && currentConn[outDir] === 1) { const nextConn = getActualConnections(grid[nr][nc]); if (nextConn[inDir] === 1 && !visited.has(`${nr}-${nc}`)) { visited.add(`${nr}-${nc}`); queue.push([nr, nc]); activePipes.push([nr, nc]); } } }); } activePipes.forEach(([r, c]) => { document.getElementById(`pipe-${r}-${c}`).classList.add('pipe-active'); }); if (visited.has(`${size-1}-${size-1}`)) { PIPE_STATE.isPlaying = false; localStorage.removeItem('mgp_pipe_save_' + currentUser.name); handleGameWin(PIPE_STATE.rewardPts, 'pipe'); setTimeout(() => { document.getElementById('pipe-play-screen').classList.add('hidden'); document.getElementById('pipe-diff-screen').classList.remove('hidden'); }, 1500); } else { setTimeout(() => alert("아직 물길이 막혀있어요! 파이프를 더 돌려보세요. 💦"), 100); } }
+        function giveUpPipeGame() { checkAndConsumeTicket(() => { localStorage.removeItem('mgp_pipe_save_' + currentUser.name); checkPipeSaveAndStart(PIPE_STATE.size, PIPE_STATE.rewardPts); }); }
+
+        /* ==================================================
+           [4] 2048 로직
+        ================================================== */
+        let G2048_STATE = { isPlaying: false, size: 4, grid: [], score: 0, rewardPts: 0, isCleared: false };
+        function checkG2048SaveAndStart(size, points) { const saveKey = 'mgp_g2048_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if(saved) { const parsed = JSON.parse(saved); if(parsed.size === size && confirm("이전에 풀던 2048이 있어! 이어서 할래?")) { G2048_STATE = parsed; G2048_STATE.rewardPts = points; renderG2048Screen(); return; } } G2048_STATE = { isPlaying: true, size: size, grid: Array(size).fill().map(() => Array(size).fill(0)), score: 0, rewardPts: points, isCleared: false }; addRandomTile2048(); addRandomTile2048(); renderG2048Screen(); saveG2048Progress(); }
+        function renderG2048Screen() { document.getElementById('g2048-diff-screen').classList.add('hidden'); document.getElementById('g2048-play-screen').classList.remove('hidden'); drawBoard2048(); }
+        function drawBoard2048() { const container = document.getElementById('g2048-board'); const s = G2048_STATE.size; const maxAreaWidth = Math.min(window.innerWidth - 60, 380); const tileSize = Math.floor((maxAreaWidth - (8 * (s - 1))) / s); document.documentElement.style.setProperty('--tile-size', `${tileSize}px`); container.style.gridTemplateColumns = `repeat(${s}, ${tileSize}px)`; container.innerHTML = ''; const fm = s === 5 ? 0.8 : (s === 3 ? 1.2 : 1); for(let r=0; r<s; r++) { for(let c=0; c<s; c++) { const tile = document.createElement('div'); let val = G2048_STATE.grid[r][c]; tile.className = `g2048-tile ${val > 0 ? 'tile-'+val : ''}`; tile.innerText = val > 0 ? val : ''; if(val >= 128) tile.style.fontSize = `${1.6 * fm}rem`; if(val >= 1024) tile.style.fontSize = `${1.3 * fm}rem`; if(val > 0 && val < 128) tile.style.fontSize = `${2 * fm}rem`; container.appendChild(tile); } } document.getElementById('g2048-score-view').innerText = G2048_STATE.score; }
+        function addRandomTile2048() { let empty = []; const s = G2048_STATE.size; for(let r=0; r<s; r++) for(let c=0; c<s; c++) if(G2048_STATE.grid[r][c] === 0) empty.push({r, c}); if(empty.length > 0) { let cell = empty[Math.floor(Math.random() * empty.length)]; G2048_STATE.grid[cell.r][cell.c] = Math.random() < 0.9 ? 2 : 4; } }
+        function slide2048(row) { let arr = row.filter(val => val); for(let i=0; i<arr.length-1; i++) { if(arr[i] === arr[i+1]) { arr[i] *= 2; G2048_STATE.score += arr[i]; if(arr[i] === 2048 && !G2048_STATE.isCleared) { G2048_STATE.isCleared = true; G2048_STATE.isPlaying = false; setTimeout(() => { localStorage.removeItem('mgp_g2048_save_' + currentUser.name); handleGameWin(G2048_STATE.rewardPts, 'g2048', "🎉 대단해! 2048 타일 완성!"); setTimeout(() => { document.getElementById('g2048-play-screen').classList.add('hidden'); document.getElementById('g2048-diff-screen').classList.remove('hidden'); }, 1000); }, 400); } arr.splice(i+1, 1); } } while(arr.length < G2048_STATE.size) arr.push(0); return arr; }
+        function operate2048(dir) { if(!G2048_STATE.isPlaying) return; let oldGrid = JSON.stringify(G2048_STATE.grid); let s = G2048_STATE.size; if(dir === 'ArrowLeft' || dir === 'ArrowRight') { for(let r=0; r<s; r++) { let row = G2048_STATE.grid[r]; if(dir === 'ArrowRight') row.reverse(); row = slide2048(row); if(dir === 'ArrowRight') row.reverse(); G2048_STATE.grid[r] = row; } } else { for(let c=0; c<s; c++) { let col = []; for(let r=0; r<s; r++) col.push(G2048_STATE.grid[r][c]); if(dir === 'ArrowDown') col.reverse(); col = slide2048(col); if(dir === 'ArrowDown') col.reverse(); for(let r=0; r<s; r++) G2048_STATE.grid[r][c] = col[r]; } } if(oldGrid !== JSON.stringify(G2048_STATE.grid) && G2048_STATE.isPlaying) { addRandomTile2048(); drawBoard2048(); saveG2048Progress(); checkGameOver2048(); } }
+        function checkGameOver2048() { let s = G2048_STATE.size, g = G2048_STATE.grid; for(let r=0; r<s; r++) { for(let c=0; c<s; c++) { if(g[r][c] === 0) return; if(c < s-1 && g[r][c] === g[r][c+1]) return; if(r < s-1 && g[r][c] === g[r+1][c]) return; } } setTimeout(() => { alert(`아앗! 공간이 꽉 찼어. 게임 오버!\n(최종 점수: ${G2048_STATE.score})`); G2048_STATE.isPlaying = false; localStorage.removeItem('mgp_g2048_save_' + currentUser.name); document.getElementById('g2048-play-screen').classList.add('hidden'); document.getElementById('g2048-diff-screen').classList.remove('hidden'); }, 300); }
+        function giveUpG2048Game() { checkAndConsumeTicket(() => { localStorage.removeItem('mgp_g2048_save_' + currentUser.name); checkG2048SaveAndStart(G2048_STATE.size, G2048_STATE.rewardPts); }); }
+        
+        document.addEventListener('keydown', e => { if(!document.getElementById('g2048-play-screen').classList.contains('hidden') && G2048_STATE.isPlaying) { if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) { e.preventDefault(); operate2048(e.key); } } });
+        let touchX=0, touchY=0; document.getElementById('g2048-board').addEventListener('touchstart', e => { touchX = e.changedTouches[0].screenX; touchY = e.changedTouches[0].screenY; }, {passive:false});
+        document.getElementById('g2048-board').addEventListener('touchend', e => { if(!G2048_STATE.isPlaying) return; let dx = e.changedTouches[0].screenX - touchX, dy = e.changedTouches[0].screenY - touchY; if(Math.abs(dx) > Math.abs(dy)) { if(Math.abs(dx) > 30) operate2048(dx > 0 ? 'ArrowRight' : 'ArrowLeft'); } else { if(Math.abs(dy) > 30) operate2048(dy > 0 ? 'ArrowDown' : 'ArrowUp'); } });
+
+        /* ==================================================
+           [5] 지뢰찾기 로직
+        ================================================== */
+        let MINE_STATE = { isPlaying: false, size: 9, totalMines: 10, grid: [], firstClick: true, tool: 'shovel', rewardPts: 0 };
+        function checkMineSaveAndStart(size, totalMines, points) { const saveKey = 'mgp_mine_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if(saved) { const parsed = JSON.parse(saved); if(parsed.size === size && parsed.totalMines === totalMines && confirm("이전에 풀던 지뢰찾기가 있어! 이어서 할래?")) { MINE_STATE = parsed; MINE_STATE.rewardPts = points; renderMineScreen(); return; } } MINE_STATE = { isPlaying: true, size: size, totalMines: totalMines, grid: [], firstClick: true, tool: 'shovel', rewardPts: points }; for(let i=0; i<size*size; i++) MINE_STATE.grid.push({ isMine: false, isOpen: false, isFlag: false, count: 0, index: i }); renderMineScreen(); saveMineProgress(); }
+        function renderMineScreen() { document.getElementById('mine-diff-screen').classList.add('hidden'); document.getElementById('mine-play-screen').classList.remove('hidden'); setMineTool('shovel'); updateMineLeftCounter(); const s = MINE_STATE.size; const maxW = Math.min(window.innerWidth - 30, 450); let cssS = Math.floor(maxW / s); if(cssS > 40) cssS = 40; if(cssS < 15) cssS = 15; document.documentElement.style.setProperty('--mine-cell-size', `${cssS}px`); const b = document.getElementById('mine-board'); b.style.gridTemplateColumns = `repeat(${s}, var(--mine-cell-size))`; b.innerHTML = ''; MINE_STATE.grid.forEach((cell, idx) => { const el = document.createElement('div'); el.className = 'mine-cell'; el.dataset.idx = idx; if(cell.isOpen) { el.classList.add('revealed'); if(cell.isMine) { el.classList.add('mine'); el.innerText = '💣'; } else if(cell.count > 0) { el.classList.add(`val-${cell.count}`); el.innerText = cell.count; } } else if(cell.isFlag) { el.classList.add('flagged'); el.innerText = '🚩'; } el.onclick = () => handleMineClick(idx, false); el.oncontextmenu = (e) => { e.preventDefault(); handleMineClick(idx, true); }; b.appendChild(el); }); }
+        function handleMineClick(idx, isRightClick) { if(!MINE_STATE.isPlaying) return; const tool = isRightClick ? 'flag' : MINE_STATE.tool; const cell = MINE_STATE.grid[idx]; if(tool === 'flag') { if(cell.isOpen) return; cell.isFlag = !cell.isFlag; saveMineProgress(); renderMineScreen(); return; } if(cell.isFlag || cell.isOpen) return; if(MINE_STATE.firstClick) { placeMines(idx); MINE_STATE.firstClick = false; } if(cell.isMine) { mineGameOver(); return; } openMineCell(idx); checkMineWin(); renderMineScreen(); saveMineProgress(); }
+        function openMineCell(idx) { const cell = MINE_STATE.grid[idx]; if(cell.isOpen || cell.isFlag) return; cell.isOpen = true; if(cell.count === 0) getMineNeighbors(idx).forEach(n => openMineCell(n)); }
+        function placeMines(firstIdx) { let placed = 0; const s = MINE_STATE.size; const total = MINE_STATE.totalMines; while(placed < total) { let rIdx = Math.floor(Math.random() * (s * s)); if(rIdx !== firstIdx && !MINE_STATE.grid[rIdx].isMine) { MINE_STATE.grid[rIdx].isMine = true; placed++; } } MINE_STATE.grid.forEach((c, i) => { if(!c.isMine) { let cnt = 0; getMineNeighbors(i).forEach(n => { if(MINE_STATE.grid[n].isMine) cnt++; }); c.count = cnt; } }); }
+        function getMineNeighbors(idx) { const s = MINE_STATE.size, row = Math.floor(idx / s), col = idx % s, res = []; for(let dr=-1; dr<=1; dr++) for(let dc=-1; dc<=1; dc++) { if(dr===0 && dc===0) continue; const nr = row + dr, nc = col + dc; if(nr>=0 && nr<s && nc>=0 && nc<s) res.push(nr * s + nc); } return res; }
+        function updateMineLeftCounter() { document.getElementById('mines-left-view').innerText = MINE_STATE.totalMines - MINE_STATE.grid.filter(c => c.isFlag).length; }
+        function setMineTool(t) { MINE_STATE.tool = t; document.getElementById('tool-mine-shovel').classList.remove('active'); document.getElementById('tool-mine-flag').classList.remove('active'); document.getElementById('tool-mine-' + t).classList.add('active'); }
+        function saveMineProgress() { localStorage.setItem('mgp_mine_save_' + currentUser.name, JSON.stringify(MINE_STATE)); }
+        function mineGameOver() { MINE_STATE.isPlaying = false; document.getElementById('mine-play-screen').classList.add('shake-effect'); setTimeout(() => document.getElementById('mine-play-screen').classList.remove('shake-effect'), 500); MINE_STATE.grid.forEach(c => { if(c.isMine) c.isOpen = true; }); renderMineScreen(); localStorage.removeItem('mgp_mine_save_' + currentUser.name); setTimeout(() => { alert("💣 앗! 지뢰가 터졌습니다!\n(포인트 획득 없이 종료됩니다)"); document.getElementById('mine-play-screen').classList.add('hidden'); document.getElementById('mine-diff-screen').classList.remove('hidden'); }, 600); }
+        function checkMineWin() { if(MINE_STATE.grid.filter(c => !c.isMine).every(c => c.isOpen)) { MINE_STATE.isPlaying = false; localStorage.removeItem('mgp_mine_save_' + currentUser.name); MINE_STATE.grid.forEach(c => { if(c.isMine && !c.isFlag) c.isFlag = true; }); renderMineScreen(); handleGameWin(MINE_STATE.rewardPts, 'mine'); setTimeout(() => { document.getElementById('mine-play-screen').classList.add('hidden'); document.getElementById('mine-diff-screen').classList.remove('hidden'); }, 1500); } }
+        function giveUpMineGame() { checkAndConsumeTicket(() => { localStorage.removeItem('mgp_mine_save_' + currentUser.name); checkMineSaveAndStart(MINE_STATE.size, MINE_STATE.totalMines, MINE_STATE.rewardPts); }); }
+    </script>
+</body>
+</html>
