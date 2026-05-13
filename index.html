@@ -3,15 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>식이쌤의 미니게임천국</title>
+    <title>서이초 미니게임천국</title>
     <style>
+        /* ==================================================
+           [1] 포털 공통 디자인
+        ================================================== */
         @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
 
         :root {
             --bg-color: #e0f7fa; --main-color: #fffde7; --point-color: #ff8a80; --text-color: #5d4037; 
+            
+            /* 네모네모 로직용 */
             --grid-line: #e0e0e0; --grid-line-thick: #999; --cell-bg: #ffffff; --cell-size: 25px;
+            
+            /* 배관공 게임용 */
             --pipe-bg: #ffffff; --pipe-color: #a0aec0; --pipe-active: #38bdf8; --pipe-size: 55px;
+            
+            /* 2048 게임용 */
             --tile-size: 70px;
+
+            /* 지뢰찾기 게임용 */
             --mine-cell-size: 30px;
             --num-1: #0288d1; --num-2: #388e3c; --num-3: #d32f2f; --num-4: #7b1fa2;
             --num-5: #f57c00; --num-6: #00796b; --num-7: #455a64; --num-8: #c2185b;
@@ -19,14 +30,17 @@
 
         body { font-family: 'Jua', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow-x: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
         body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="25" cy="25" r="20" fill="white" opacity="0.5"/><circle cx="75" cy="50" r="25" fill="white" opacity="0.5"/><circle cx="10" cy="80" r="15" fill="white" opacity="0.5"/></svg>'); z-index: -1; }
+        
         .container { width: 95%; max-width: 450px; background-color: rgba(255, 255, 255, 0.95); border-radius: 30px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); padding: 20px; box-sizing: border-box; text-align: center; position: relative; }
         .hidden { display: none !important; }
 
+        /* 로그인 화면 */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
         #login-screen input { padding: 15px; border-radius: 15px; border: 2px solid var(--point-color); font-family: 'Jua', sans-serif; font-size: 1.2rem; text-align: center; margin-bottom: 15px; outline: none; }
         .btn-primary { padding: 10px 20px; background-color: var(--point-color); color: white; border: none; border-radius: 15px; font-family: 'Jua', sans-serif; font-size: 1.2rem; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 0 #d84315; }
         .btn-primary:active { transform: translateY(4px); box-shadow: 0 0 0 #d84315; }
 
+        /* 포털 메인 UI */
         #logout-btn { position: absolute; top: -10px; right: -10px; background-color: #ffccbc; color: #d84315; border: 2px solid white; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-family: 'Jua', sans-serif; }
         #header { background-color: var(--main-color); border-radius: 20px; padding: 15px; margin-bottom: 20px; border: 3px solid #ffecb3; display: flex; justify-content: space-around; font-size: 1.1rem; }
         .info-box { display: flex; flex-direction: column; align-items: center; }
@@ -39,16 +53,19 @@
         .game-icon { font-size: 3rem; margin-bottom: 10px; display: block; }
         .game-title { font-size: 1.1rem; font-weight: bold; }
 
+        /* 랭킹 보드 */
         #ranking-box { background-color: white; border-radius: 20px; padding: 15px; border: 2px solid #e0e0e0; }
         #ranking-title { font-size: 1.1rem; margin-bottom: 10px; color: #795548; display: flex; justify-content: space-between; align-items: center;}
         .ranking-list { list-style: none; padding: 0; margin: 0; text-align: left; }
         .ranking-list li { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px dashed #eee; font-size: 0.95rem; }
         .rank-num { font-weight: bold; color: var(--point-color); margin-right: 10px; display: inline-block; width: 25px;}
         .rank-score { color: #8d6e63; }
+        
         .btn-half { padding: 8px; border: none; border-radius: 10px; font-family: 'Jua', sans-serif; cursor: pointer; transition: 0.2s; flex: 1; margin: 0 5px;}
         .btn-blue { background-color: #bbdefb; color: #1565c0; } .btn-blue:hover { background-color: #90caf9; }
         .btn-gold { background-color: #fff9c4; color: #f57f17; } .btn-gold:hover { background-color: #fff59d; }
 
+        /* 모달 */
         #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
         #modal-content { background-color: white; width: 85%; max-width: 400px; border-radius: 25px; padding: 20px; position: relative; text-align: center; }
         #close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #999; cursor: pointer; border: none; background: none; }
@@ -70,7 +87,7 @@
         .tool-btn.active { background: var(--point-color); color: white; border-color: var(--point-color); }
         .tool-giveup { background: #ffe0b2; color: #ef6c00; border-color: #ffb74d; }
 
-        /* 시즌 점수 제한 UI (새로 추가) */
+        /* 시즌 점수 제한 UI */
         .season-limit-box { background: #f3e5f5; border: 2px dashed #ab47bc; color: #6a1b9a; padding: 10px; border-radius: 15px; margin-bottom: 15px; font-size: 1.1rem; }
         .progress-bar-bg { width: 100%; background-color: #e1bee7; border-radius: 10px; height: 12px; margin-top: 5px; overflow: hidden; }
         .progress-bar-fill { height: 100%; background-color: #ab47bc; width: 0%; transition: width 0.5s ease-in-out; }
@@ -90,8 +107,8 @@
 
     <!-- 0. 로그인 -->
     <div id="login-screen">
-        <h1 style="margin-bottom: 30px; color: #5d4037;">🏫 미니게임천국</h1>
-        <input type="text" id="user-input" placeholder="학번+이름 (예: 5901식이)" maxlength="10">
+        <h1 style="margin-bottom: 30px; color: #5d4037;">🏫 서이초 미니게임천국</h1>
+        <input type="text" id="user-input" placeholder="학번+이름 (예: 5101홍길동)" maxlength="10">
         <button class="btn-primary" onclick="handleLogin()">입장하기! ✨</button>
     </div>
 
@@ -405,7 +422,7 @@
         let G2048_STATE = { isPlaying: false, size: 4, grid: [], score: 0, rewardPts: 0, isCleared: false };
         function checkG2048SaveAndStart(size, points) { const saveKey = 'mgp_g2048_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if(saved) { const parsed = JSON.parse(saved); if(parsed.size === size && confirm("이전에 풀던 2048이 있어! 이어서 할래?")) { G2048_STATE = parsed; G2048_STATE.rewardPts = points; renderG2048Screen(); return; } } G2048_STATE = { isPlaying: true, size: size, grid: Array(size).fill().map(() => Array(size).fill(0)), score: 0, rewardPts: points, isCleared: false }; addRandomTile2048(); addRandomTile2048(); renderG2048Screen(); saveG2048Progress(); }
         function renderG2048Screen() { document.getElementById('g2048-diff-screen').classList.add('hidden'); document.getElementById('g2048-play-screen').classList.remove('hidden'); drawBoard2048(); }
-        function drawBoard2048() { const container = document.getElementById('g2048-board'); const s = G2048_STATE.size; const maxAreaWidth = Math.min(window.innerWidth - 60, 380); const tileSize = Math.floor((maxAreaWidth - (8 * (s - 1))) / s); document.documentElement.style.setProperty('--tile-size', `${tileSize}px`); container.style.gridTemplateColumns = `repeat(${s}, ${tileSize}px)`; container.innerHTML = ''; const fm = s === 5 ? 0.8 : (s === 3 ? 1.2 : 1); for(let r=0; r<s; r++) { for(let c=0; c<s; c++) { const tile = document.createElement('div'); let val = G2048_STATE.grid[r][c]; tile.className = `g2048-tile ${val > 0 ? 'tile-'+val : ''}`; tile.innerText = val > 0 ? val : ''; if(val >= 128) tile.style.fontSize = `${1.6 * fm}rem`; if(val >= 1024) tile.style.fontSize = `${1.3 * fm}rem`; if(val > 0 && val < 128) tile.style.fontSize = `${2 * fm}rem`; container.appendChild(tile); } } document.getElementById('g2048-score-view').innerText = G2048_STATE.score; }
+        function drawBoard2048() { const container = document.getElementById('g2048-board'); const s = G2048_STATE.size; const maxAreaWidth = Math.min(window.innerWidth - 60, 380); const gap = 8; const tileSize = Math.floor((maxAreaWidth - (gap * (s - 1))) / s); document.documentElement.style.setProperty('--tile-size', `${tileSize}px`); container.style.gridTemplateColumns = `repeat(${s}, ${tileSize}px)`; container.innerHTML = ''; const fm = s === 5 ? 0.8 : (s === 3 ? 1.2 : 1); for(let r=0; r<s; r++) { for(let c=0; c<s; c++) { const tile = document.createElement('div'); let val = G2048_STATE.grid[r][c]; tile.className = `g2048-tile ${val > 0 ? 'tile-'+val : ''}`; tile.innerText = val > 0 ? val : ''; if(val >= 128) tile.style.fontSize = `${1.6 * fm}rem`; if(val >= 1024) tile.style.fontSize = `${1.3 * fm}rem`; if(val > 0 && val < 128) tile.style.fontSize = `${2 * fm}rem`; container.appendChild(tile); } } document.getElementById('g2048-score-view').innerText = G2048_STATE.score; }
         function addRandomTile2048() { let empty = []; const s = G2048_STATE.size; for(let r=0; r<s; r++) for(let c=0; c<s; c++) if(G2048_STATE.grid[r][c] === 0) empty.push({r, c}); if(empty.length > 0) { let cell = empty[Math.floor(Math.random() * empty.length)]; G2048_STATE.grid[cell.r][cell.c] = Math.random() < 0.9 ? 2 : 4; } }
         function slide2048(row) { let arr = row.filter(val => val); for(let i=0; i<arr.length-1; i++) { if(arr[i] === arr[i+1]) { arr[i] *= 2; G2048_STATE.score += arr[i]; if(arr[i] === 2048 && !G2048_STATE.isCleared) { G2048_STATE.isCleared = true; G2048_STATE.isPlaying = false; setTimeout(() => { localStorage.removeItem('mgp_g2048_save_' + currentUser.name); handleGameWin(G2048_STATE.rewardPts, 'g2048', "🎉 대단해! 2048 타일 완성!"); setTimeout(() => { document.getElementById('g2048-play-screen').classList.add('hidden'); document.getElementById('g2048-diff-screen').classList.remove('hidden'); }, 1000); }, 400); } arr.splice(i+1, 1); } } while(arr.length < G2048_STATE.size) arr.push(0); return arr; }
         function operate2048(dir) { if(!G2048_STATE.isPlaying) return; let oldGrid = JSON.stringify(G2048_STATE.grid); let s = G2048_STATE.size; if(dir === 'ArrowLeft' || dir === 'ArrowRight') { for(let r=0; r<s; r++) { let row = G2048_STATE.grid[r]; if(dir === 'ArrowRight') row.reverse(); row = slide2048(row); if(dir === 'ArrowRight') row.reverse(); G2048_STATE.grid[r] = row; } } else { for(let c=0; c<s; c++) { let col = []; for(let r=0; r<s; r++) col.push(G2048_STATE.grid[r][c]); if(dir === 'ArrowDown') col.reverse(); col = slide2048(col); if(dir === 'ArrowDown') col.reverse(); for(let r=0; r<s; r++) G2048_STATE.grid[r][c] = col[r]; } } if(oldGrid !== JSON.stringify(G2048_STATE.grid) && G2048_STATE.isPlaying) { addRandomTile2048(); drawBoard2048(); saveG2048Progress(); checkGameOver2048(); } }
