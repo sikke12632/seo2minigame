@@ -60,7 +60,6 @@
         .ranking-list li { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px dashed #eee; font-size: 0.95rem; }
         .rank-num { font-weight: bold; color: var(--point-color); margin-right: 10px; display: inline-block; width: 25px;}
         .rank-score { color: #8d6e63; }
-        
         .btn-half { padding: 8px; border: none; border-radius: 10px; font-family: 'Jua', sans-serif; cursor: pointer; transition: 0.2s; flex: 1; margin: 0 5px;}
         .btn-blue { background-color: #bbdefb; color: #1565c0; } .btn-blue:hover { background-color: #90caf9; }
         .btn-gold { background-color: #fff9c4; color: #f57f17; } .btn-gold:hover { background-color: #fff59d; }
@@ -288,7 +287,6 @@
             document.getElementById('display-tickets').innerText = `🎟️ ${currentUser.tickets}장`;
             document.querySelectorAll('.ticket-view').forEach(el => el.innerText = currentUser.tickets);
             
-            // 각 게임별 진행률 바 업데이트
             ['nono', 'pipe', 'g2048', 'mine'].forEach(game => {
                 const s = currentUser[game + 'Score'];
                 document.getElementById(`${game}-season-score`).innerText = s;
@@ -296,35 +294,22 @@
             });
         }
 
-        // 공통 게임 승리 처리 (상한제 1000점 적용)
         function handleGameWin(pts, gameType, specialMsg = null) {
             let currentScore = currentUser[gameType + 'Score'] || 0;
-            
-            // 1. 이미 1000점에 도달한 경우 (점수 미지급, 자유 플레이 안내)
             if (currentScore >= MAX_SCORE_PER_GAME) {
-                setTimeout(() => { 
-                    alert(`🎉 대단해요!\n(이번 시즌 ${MAX_SCORE_PER_GAME}점을 모두 달성하여 점수는 오르지 않고 자유 플레이로 진행됩니다!)`); 
-                }, 400);
-                return;
+                setTimeout(() => { alert(`🎉 대단해요!\n(이번 시즌 ${MAX_SCORE_PER_GAME}점을 모두 달성하여 점수는 오르지 않고 자유 플레이로 진행됩니다!)`); }, 400); return;
             }
-
-            // 2. 점수 지급 (1000점을 넘지 않도록 제한)
             let pointsToAdd = Math.min(pts, MAX_SCORE_PER_GAME - currentScore);
-            currentUser[gameType + 'Score'] += pointsToAdd;
-            currentUser.score += pointsToAdd;
+            currentUser[gameType + 'Score'] += pointsToAdd; currentUser.score += pointsToAdd;
             if(currentUser.tickets < 5) currentUser.tickets += 1; 
-            
             saveUserData();
-            
-            setTimeout(() => { 
-                if(specialMsg) alert(`${specialMsg}\n+${pointsToAdd}점 획득! (티켓 1장 충전)`);
-                else alert(`🎉 클리어 완료!\n+${pointsToAdd}점 획득! (티켓 1장 충전)`); 
-            }, 400);
+            setTimeout(() => { if(specialMsg) alert(`${specialMsg}\n+${pointsToAdd}점 획득! (티켓 1장 충전)`); else alert(`🎉 클리어 완료!\n+${pointsToAdd}점 획득! (티켓 1장 충전)`); }, 400);
         }
 
+        // 🚨 포기 버튼 로직 패치 적용 완료! (무조건 난이도 화면으로 돌아갑니다)
         function checkAndConsumeTicket(callback) {
             if(currentUser.tickets <= 0) { alert("포기 티켓이 부족해. 다른 게임을 클리어해서 티켓을 모아와!"); return; }
-            if(confirm("티켓을 1장 사용해서 이 문제를 포기하고 새 문제를 받을까?")) { currentUser.tickets -= 1; saveUserData(); callback(); }
+            if(confirm("티켓을 1장 사용해서 이 문제를 포기하고 초기 화면으로 돌아갈까?")) { currentUser.tickets -= 1; saveUserData(); callback(); }
         }
 
         /* 랭킹 불러오기 */
@@ -393,41 +378,101 @@
         function isNonoSolvable(size, rowClues, colClues) { const grid = Array(size).fill(0).map(() => Array(size).fill(-1)); let changed = true, iterations = 0; const rowPerms = rowClues.map(c => getNonoPerms(size, c)); const colPerms = colClues.map(c => getNonoPerms(size, c)); while (changed && iterations < 15) { changed = false; iterations++; for (let r = 0; r < size; r++) { const valid = rowPerms[r].filter(p => p.every((val, c) => grid[r][c] === -1 || grid[r][c] === val)); rowPerms[r] = valid; if (valid.length === 0) return false; for (let c = 0; c < size; c++) { if (grid[r][c] !== -1) continue; const firstVal = valid[0][c]; if (valid.every(p => p[c] === firstVal)) { grid[r][c] = firstVal; changed = true; } } } for (let c = 0; c < size; c++) { const valid = colPerms[c].filter(p => p.every((val, r) => grid[r][c] === -1 || grid[r][c] === val)); colPerms[c] = valid; if (valid.length === 0) return false; for (let r = 0; r < size; r++) { if (grid[r][c] !== -1) continue; const firstVal = valid[0][r]; if (valid.every(p => p[r] === firstVal)) { grid[r][c] = firstVal; changed = true; } } } } return grid.every(row => row.every(cell => cell !== -1)); }
         function generateNonoLevel(size, callback) { const density = size === 5 ? 0.6 : (size === 10 ? 0.55 : 0.5); let attempts = 0; function tryGenerate() { for(let i=0; i<5; i++) { attempts++; const tempGrid = Array(size).fill(0).map(() => Array(size).fill(0).map(() => Math.random() < density ? 1 : 0)); for(let r=0; r<size; r++) if(tempGrid[r].every(v=>v===0)) tempGrid[r][Math.floor(Math.random()*size)] = 1; for(let c=0; c<size; c++) if(tempGrid.every(row=>row[c]===0)) tempGrid[Math.floor(Math.random()*size)][c] = 1; const rClues = tempGrid.map(row => getNonoClues(row)); const cClues = []; for(let c=0; c<size; c++) cClues.push(getNonoClues(tempGrid.map(row => row[c]))); if (isNonoSolvable(size, rClues, cClues)) { callback({ grid: tempGrid, rowClues: rClues, colClues: cClues }); return; } } if (attempts < 50) setTimeout(tryGenerate, 10); else { const fallbackGrid = Array(size).fill(0).map((_,r) => Array(size).fill(0).map((_,c) => (r===Math.floor(size/2) || c===Math.floor(size/2)) ? 1 : 0)); callback({ grid: fallbackGrid, rowClues: fallbackGrid.map(row=>getNonoClues(row)), colClues: fallbackGrid[0].map((_,c)=>getNonoClues(fallbackGrid.map(row=>row[c]))) }); } } tryGenerate(); }
         
-        function checkNonoSaveAndStart(size, points) { const saveKey = 'mgp_nono_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if (saved) { const parsed = JSON.parse(saved); if (parsed.size === size && confirm("이전에 풀다 만 로직이 있어! 이어서 할래?")) { NONO_STATE = parsed; NONO_STATE.rewardPts = points; renderNonoScreen(); return; } } showLoading("퍼즐 생성 중... 🧩"); generateNonoLevel(size, (data) => { NONO_STATE.size = size; NONO_STATE.rewardPts = points; NONO_STATE.targetGrid = data.grid; NONO_STATE.rowClues = data.rowClues; NONO_STATE.colClues = data.colClues; NONO_STATE.playerGrid = Array(size).fill(0).map(() => Array(size).fill(0)); NONO_STATE.isPlaying = true; hideLoading(); renderNonoScreen(); saveNonoProgress(); }); }
+        function checkNonoSaveAndStart(size, points) { 
+            const saveKey = 'mgp_nono_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); 
+            if (saved) { 
+                const parsed = JSON.parse(saved); 
+                alert(`⚠️ 진행 중이던 네모네모(${parsed.size}x${parsed.size})가 있어 이어서 시작합니다!\n(새 난이도를 원하면 '포기'를 눌러주세요.)`);
+                NONO_STATE = parsed; renderNonoScreen(); return; 
+            } 
+            showLoading("퍼즐 생성 중... 🧩"); generateNonoLevel(size, (data) => { NONO_STATE.size = size; NONO_STATE.rewardPts = points; NONO_STATE.targetGrid = data.grid; NONO_STATE.rowClues = data.rowClues; NONO_STATE.colClues = data.colClues; NONO_STATE.playerGrid = Array(size).fill(0).map(() => Array(size).fill(0)); NONO_STATE.isPlaying = true; hideLoading(); renderNonoScreen(); saveNonoProgress(); }); 
+        }
         function renderNonoScreen() { document.getElementById('nono-diff-screen').classList.add('hidden'); document.getElementById('nono-play-screen').classList.remove('hidden'); setNonoTool('pencil'); const maxW = Math.min(window.innerWidth - 40, 400); const s = NONO_STATE.size; let cssS = Math.floor(maxW / (s + Math.ceil(s / 2))); if(cssS > 30) cssS = 30; if(cssS < 12) cssS = 12; document.documentElement.style.setProperty('--cell-size', `${cssS}px`); const b = document.getElementById('nono-board'); b.className = `nono-grid size-${s}`; b.style.gridTemplateColumns = `repeat(${s}, var(--cell-size))`; b.innerHTML = ''; const rContainer = document.getElementById('nono-row-clues'); rContainer.innerHTML = ''; rContainer.style.gridTemplateRows = `repeat(${s}, var(--cell-size))`; NONO_STATE.rowClues.forEach(clues => { const el = document.createElement('div'); el.className = 'clue-row'; el.innerHTML = clues.map(c => `<span>${c}</span>`).join(''); rContainer.appendChild(el); }); const cContainer = document.getElementById('nono-col-clues'); cContainer.innerHTML = ''; cContainer.style.gridTemplateColumns = `repeat(${s}, var(--cell-size))`; NONO_STATE.colClues.forEach(clues => { const el = document.createElement('div'); el.className = 'clue-col'; el.innerHTML = clues.map(c => `<span>${c}</span>`).join(''); cContainer.appendChild(el); }); for(let r=0; r<s; r++) { for(let c=0; c<s; c++) { const el = document.createElement('div'); el.className = 'nono-cell'; const state = NONO_STATE.playerGrid[r][c]; if (state === 1) el.classList.add('filled'); else if (state === 2) el.classList.add('marked-x'); el.onclick = () => handleNonoClick(r, c, false); el.oncontextmenu = (e) => { e.preventDefault(); handleNonoClick(r, c, true); }; b.appendChild(el); } } checkNonoClues(); }
         function handleNonoClick(r, c, isRightClick) { if(!NONO_STATE.isPlaying) return; const targetVal = (isRightClick ? 'cross' : NONO_STATE.tool) === 'pencil' ? 1 : 2; NONO_STATE.playerGrid[r][c] = NONO_STATE.playerGrid[r][c] === targetVal ? 0 : targetVal; renderNonoScreen(); saveNonoProgress(); checkNonoWin(); }
         function checkNonoClues() { const s = NONO_STATE.size; const rCh = document.getElementById('nono-row-clues').children; const cCh = document.getElementById('nono-col-clues').children; for(let r=0; r<s; r++) { const cur = getNonoClues(NONO_STATE.playerGrid[r].map(v => v===1?1:0)); Array.from(rCh[r].children).forEach(sp => JSON.stringify(cur) === JSON.stringify(NONO_STATE.rowClues[r]) ? sp.classList.add('completed') : sp.classList.remove('completed')); } for(let c=0; c<s; c++) { const col = []; for(let r=0; r<s; r++) col.push(NONO_STATE.playerGrid[r][c]===1?1:0); const cur = getNonoClues(col); Array.from(cCh[c].children).forEach(sp => JSON.stringify(cur) === JSON.stringify(NONO_STATE.colClues[c]) ? sp.classList.add('completed') : sp.classList.remove('completed')); } }
         function setNonoTool(t) { NONO_STATE.tool = t; document.getElementById('tool-pencil').classList.remove('active'); document.getElementById('tool-cross').classList.remove('active'); document.getElementById('tool-' + t).classList.add('active'); }
         function saveNonoProgress() { localStorage.setItem('mgp_nono_save_' + currentUser.name, JSON.stringify(NONO_STATE)); }
         function checkNonoWin() { let isWin = true; const s = NONO_STATE.size; for(let r=0; r<s; r++) for(let c=0; c<s; c++) { if (NONO_STATE.targetGrid[r][c] === 1 && NONO_STATE.playerGrid[r][c] !== 1) isWin = false; if (NONO_STATE.targetGrid[r][c] === 0 && NONO_STATE.playerGrid[r][c] === 1) isWin = false; } if(isWin) { NONO_STATE.isPlaying = false; localStorage.removeItem('mgp_nono_save_' + currentUser.name); for(let r=0; r<s; r++) for(let c=0; c<s; c++) if(NONO_STATE.targetGrid[r][c] === 0) NONO_STATE.playerGrid[r][c] = 2; renderNonoScreen(); handleGameWin(NONO_STATE.rewardPts, 'nono'); setTimeout(() => { document.getElementById('nono-play-screen').classList.add('hidden'); document.getElementById('nono-diff-screen').classList.remove('hidden'); }, 1500); } }
-        function giveUpNonoGame() { checkAndConsumeTicket(() => { localStorage.removeItem('mgp_nono_save_' + currentUser.name); checkNonoSaveAndStart(NONO_STATE.size, NONO_STATE.rewardPts); }); }
+        
+        function giveUpNonoGame() { 
+            checkAndConsumeTicket(() => { 
+                localStorage.removeItem('mgp_nono_save_' + currentUser.name); 
+                NONO_STATE.isPlaying = false;
+                document.getElementById('nono-play-screen').classList.add('hidden'); 
+                document.getElementById('nono-diff-screen').classList.remove('hidden'); 
+            }); 
+        }
 
         /* ==================================================
            [3] 배관공 로직
         ================================================== */
         const PIPE_TYPES = [ { type: 'I', connect: [1, 0, 1, 0] }, { type: 'L', connect: [1, 1, 0, 0] } ];
         let PIPE_STATE = { isPlaying: false, size: 5, grid: [], rewardPts: 0 };
-        function checkPipeSaveAndStart(size, points) { const saveKey = 'mgp_pipe_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if (saved) { const parsed = JSON.parse(saved); if (parsed.size === size && confirm("이전에 풀다 만 파이프가 있어! 이어서 할래?")) { PIPE_STATE = parsed; PIPE_STATE.rewardPts = points; renderPipeScreen(); return; } } showLoading("배관 배치 중... 🔧"); setTimeout(() => { generatePipeLevel(size); PIPE_STATE.size = size; PIPE_STATE.rewardPts = points; PIPE_STATE.isPlaying = true; hideLoading(); renderPipeScreen(); savePipeProgress(); }, 300); }
+        function checkPipeSaveAndStart(size, points) { 
+            const saveKey = 'mgp_pipe_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); 
+            if (saved) { 
+                const parsed = JSON.parse(saved); 
+                alert(`⚠️ 연결하다 만 배관(${parsed.size}x${parsed.size})이 있어 이어서 시작합니다!\n(새 난이도를 원하면 '포기'를 눌러주세요.)`);
+                PIPE_STATE = parsed; renderPipeScreen(); return; 
+            } 
+            showLoading("배관 배치 중... 🔧"); setTimeout(() => { generatePipeLevel(size); PIPE_STATE.size = size; PIPE_STATE.rewardPts = points; PIPE_STATE.isPlaying = true; hideLoading(); renderPipeScreen(); savePipeProgress(); }, 300); 
+        }
         function generatePipeLevel(size) { const grid = []; for (let r = 0; r < size; r++) { grid[r] = []; for (let c = 0; c < size; c++) { const rp = PIPE_TYPES[Math.floor(Math.random() * PIPE_TYPES.length)]; grid[r][c] = { r, c, type: rp.type, rotation: Math.floor(Math.random() * 4), baseConnect: [...rp.connect], isStart: (r === 0 && c === 0), isEnd: (r === size-1 && c === size-1) }; } } PIPE_STATE.grid = grid; }
         function renderPipeScreen() { document.getElementById('pipe-diff-screen').classList.add('hidden'); document.getElementById('pipe-play-screen').classList.remove('hidden'); const size = PIPE_STATE.size; const maxW = Math.min(window.innerWidth - 60, 400); document.documentElement.style.setProperty('--pipe-size', `${Math.floor(maxW / size)}px`); const board = document.getElementById('pipe-board'); board.style.gridTemplateColumns = `repeat(${size}, 1fr)`; board.innerHTML = ''; for (let r = 0; r < size; r++) { for (let c = 0; c < size; c++) { const pipe = PIPE_STATE.grid[r][c]; const el = document.createElement('div'); el.className = `pipe-cell ${pipe.isStart ? 'is-start' : ''} ${pipe.isEnd ? 'is-end' : ''}`; el.id = `pipe-${r}-${c}`; const center = document.createElement('div'); center.className = 'pipe-center'; el.appendChild(center); drawPipeArms(el, pipe); el.onclick = () => { if(!PIPE_STATE.isPlaying) return; pipe.rotation = (pipe.rotation + 1) % 4; drawPipeArms(el, pipe); savePipeProgress(); document.querySelectorAll('.pipe-cell').forEach(cell => cell.classList.remove('pipe-active')); }; board.appendChild(el); } } }
         function drawPipeArms(el, pipe) { el.querySelectorAll('.pipe-arm').forEach(arm => arm.remove()); const actualConn = getActualConnections(pipe); for(let i=0; i<4; i++) { if(actualConn[i] === 1) { const arm = document.createElement('div'); arm.className = `pipe-arm arm-${i}`; el.appendChild(arm); } } }
         function getActualConnections(pipe) { let conn = [...pipe.baseConnect]; for(let i=0; i<pipe.rotation; i++) conn.unshift(conn.pop()); return conn; }
         function savePipeProgress() { localStorage.setItem('mgp_pipe_save_' + currentUser.name, JSON.stringify(PIPE_STATE)); }
         function checkPipeConnection() { if(!PIPE_STATE.isPlaying) return; const size = PIPE_STATE.size; const grid = PIPE_STATE.grid; document.querySelectorAll('.pipe-cell').forEach(el => el.classList.remove('pipe-active')); const queue = [[0, 0]]; const visited = new Set(['0-0']); const activePipes = [[0, 0]]; while (queue.length > 0) { const [r, c] = queue.shift(); const currentConn = getActualConnections(grid[r][c]); const directions = [[-1, 0, 0, 2], [0, 1, 1, 3], [1, 0, 2, 0], [0, -1, 3, 1]]; directions.forEach(([dr, dc, outDir, inDir]) => { const nr = r + dr, nc = c + dc; if (nr >= 0 && nr < size && nc >= 0 && nc < size && currentConn[outDir] === 1) { const nextConn = getActualConnections(grid[nr][nc]); if (nextConn[inDir] === 1 && !visited.has(`${nr}-${nc}`)) { visited.add(`${nr}-${nc}`); queue.push([nr, nc]); activePipes.push([nr, nc]); } } }); } activePipes.forEach(([r, c]) => { document.getElementById(`pipe-${r}-${c}`).classList.add('pipe-active'); }); if (visited.has(`${size-1}-${size-1}`)) { PIPE_STATE.isPlaying = false; localStorage.removeItem('mgp_pipe_save_' + currentUser.name); handleGameWin(PIPE_STATE.rewardPts, 'pipe'); setTimeout(() => { document.getElementById('pipe-play-screen').classList.add('hidden'); document.getElementById('pipe-diff-screen').classList.remove('hidden'); }, 1500); } else { setTimeout(() => alert("아직 물길이 막혀있어요! 파이프를 더 돌려보세요. 💦"), 100); } }
-        function giveUpPipeGame() { checkAndConsumeTicket(() => { localStorage.removeItem('mgp_pipe_save_' + currentUser.name); checkPipeSaveAndStart(PIPE_STATE.size, PIPE_STATE.rewardPts); }); }
+        
+        function giveUpPipeGame() { 
+            checkAndConsumeTicket(() => { 
+                localStorage.removeItem('mgp_pipe_save_' + currentUser.name); 
+                PIPE_STATE.isPlaying = false;
+                document.getElementById('pipe-play-screen').classList.add('hidden'); 
+                document.getElementById('pipe-diff-screen').classList.remove('hidden'); 
+            }); 
+        }
 
         /* ==================================================
-           [4] 2048 로직
+           [4] 2048 로직 (저장 기능 추가 및 납치 패치 완료)
         ================================================== */
         let G2048_STATE = { isPlaying: false, size: 4, grid: [], score: 0, rewardPts: 0, isCleared: false };
-        function checkG2048SaveAndStart(size, points) { const saveKey = 'mgp_g2048_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if(saved) { const parsed = JSON.parse(saved); if(parsed.size === size && confirm("이전에 풀던 2048이 있어! 이어서 할래?")) { G2048_STATE = parsed; G2048_STATE.rewardPts = points; renderG2048Screen(); return; } } G2048_STATE = { isPlaying: true, size: size, grid: Array(size).fill().map(() => Array(size).fill(0)), score: 0, rewardPts: points, isCleared: false }; addRandomTile2048(); addRandomTile2048(); renderG2048Screen(); saveG2048Progress(); }
+        
+        function saveG2048Progress() { 
+            localStorage.setItem('mgp_g2048_save_' + currentUser.name, JSON.stringify(G2048_STATE)); 
+        }
+
+        function checkG2048SaveAndStart(size, points) { 
+            const saveKey = 'mgp_g2048_save_' + currentUser.name; 
+            const saved = localStorage.getItem(saveKey); 
+            if(saved) { 
+                const parsed = JSON.parse(saved); 
+                alert(`⚠️ 진행 중이던 2048(${parsed.size}x${parsed.size})이 있어 이어서 시작합니다!\n(새 난이도를 원하면 '포기'를 눌러주세요.)`);
+                G2048_STATE = parsed; 
+                renderG2048Screen(); 
+                return; 
+            } 
+            G2048_STATE = { isPlaying: true, size: size, grid: Array(size).fill().map(() => Array(size).fill(0)), score: 0, rewardPts: points, isCleared: false }; 
+            addRandomTile2048(); 
+            addRandomTile2048(); 
+            renderG2048Screen(); 
+            saveG2048Progress(); 
+        }
         function renderG2048Screen() { document.getElementById('g2048-diff-screen').classList.add('hidden'); document.getElementById('g2048-play-screen').classList.remove('hidden'); drawBoard2048(); }
         function drawBoard2048() { const container = document.getElementById('g2048-board'); const s = G2048_STATE.size; const maxAreaWidth = Math.min(window.innerWidth - 60, 380); const gap = 8; const tileSize = Math.floor((maxAreaWidth - (gap * (s - 1))) / s); document.documentElement.style.setProperty('--tile-size', `${tileSize}px`); container.style.gridTemplateColumns = `repeat(${s}, ${tileSize}px)`; container.innerHTML = ''; const fm = s === 5 ? 0.8 : (s === 3 ? 1.2 : 1); for(let r=0; r<s; r++) { for(let c=0; c<s; c++) { const tile = document.createElement('div'); let val = G2048_STATE.grid[r][c]; tile.className = `g2048-tile ${val > 0 ? 'tile-'+val : ''}`; tile.innerText = val > 0 ? val : ''; if(val >= 128) tile.style.fontSize = `${1.6 * fm}rem`; if(val >= 1024) tile.style.fontSize = `${1.3 * fm}rem`; if(val > 0 && val < 128) tile.style.fontSize = `${2 * fm}rem`; container.appendChild(tile); } } document.getElementById('g2048-score-view').innerText = G2048_STATE.score; }
         function addRandomTile2048() { let empty = []; const s = G2048_STATE.size; for(let r=0; r<s; r++) for(let c=0; c<s; c++) if(G2048_STATE.grid[r][c] === 0) empty.push({r, c}); if(empty.length > 0) { let cell = empty[Math.floor(Math.random() * empty.length)]; G2048_STATE.grid[cell.r][cell.c] = Math.random() < 0.9 ? 2 : 4; } }
         function slide2048(row) { let arr = row.filter(val => val); for(let i=0; i<arr.length-1; i++) { if(arr[i] === arr[i+1]) { arr[i] *= 2; G2048_STATE.score += arr[i]; if(arr[i] === 2048 && !G2048_STATE.isCleared) { G2048_STATE.isCleared = true; G2048_STATE.isPlaying = false; setTimeout(() => { localStorage.removeItem('mgp_g2048_save_' + currentUser.name); handleGameWin(G2048_STATE.rewardPts, 'g2048', "🎉 대단해! 2048 타일 완성!"); setTimeout(() => { document.getElementById('g2048-play-screen').classList.add('hidden'); document.getElementById('g2048-diff-screen').classList.remove('hidden'); }, 1000); }, 400); } arr.splice(i+1, 1); } } while(arr.length < G2048_STATE.size) arr.push(0); return arr; }
         function operate2048(dir) { if(!G2048_STATE.isPlaying) return; let oldGrid = JSON.stringify(G2048_STATE.grid); let s = G2048_STATE.size; if(dir === 'ArrowLeft' || dir === 'ArrowRight') { for(let r=0; r<s; r++) { let row = G2048_STATE.grid[r]; if(dir === 'ArrowRight') row.reverse(); row = slide2048(row); if(dir === 'ArrowRight') row.reverse(); G2048_STATE.grid[r] = row; } } else { for(let c=0; c<s; c++) { let col = []; for(let r=0; r<s; r++) col.push(G2048_STATE.grid[r][c]); if(dir === 'ArrowDown') col.reverse(); col = slide2048(col); if(dir === 'ArrowDown') col.reverse(); for(let r=0; r<s; r++) G2048_STATE.grid[r][c] = col[r]; } } if(oldGrid !== JSON.stringify(G2048_STATE.grid) && G2048_STATE.isPlaying) { addRandomTile2048(); drawBoard2048(); saveG2048Progress(); checkGameOver2048(); } }
         function checkGameOver2048() { let s = G2048_STATE.size, g = G2048_STATE.grid; for(let r=0; r<s; r++) { for(let c=0; c<s; c++) { if(g[r][c] === 0) return; if(c < s-1 && g[r][c] === g[r][c+1]) return; if(r < s-1 && g[r][c] === g[r+1][c]) return; } } setTimeout(() => { alert(`아앗! 공간이 꽉 찼어. 게임 오버!\n(최종 점수: ${G2048_STATE.score})`); G2048_STATE.isPlaying = false; localStorage.removeItem('mgp_g2048_save_' + currentUser.name); document.getElementById('g2048-play-screen').classList.add('hidden'); document.getElementById('g2048-diff-screen').classList.remove('hidden'); }, 300); }
-        function giveUpG2048Game() { checkAndConsumeTicket(() => { localStorage.removeItem('mgp_g2048_save_' + currentUser.name); checkG2048SaveAndStart(G2048_STATE.size, G2048_STATE.rewardPts); }); }
+        
+        function giveUpG2048Game() { 
+            checkAndConsumeTicket(() => { 
+                localStorage.removeItem('mgp_g2048_save_' + currentUser.name); 
+                G2048_STATE.isPlaying = false;
+                document.getElementById('g2048-play-screen').classList.add('hidden'); 
+                document.getElementById('g2048-diff-screen').classList.remove('hidden'); 
+            }); 
+        }
         
         document.addEventListener('keydown', e => { if(!document.getElementById('g2048-play-screen').classList.contains('hidden') && G2048_STATE.isPlaying) { if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) { e.preventDefault(); operate2048(e.key); } } });
         let touchX=0, touchY=0; document.getElementById('g2048-board').addEventListener('touchstart', e => { touchX = e.changedTouches[0].screenX; touchY = e.changedTouches[0].screenY; }, {passive:false});
@@ -437,7 +482,15 @@
            [5] 지뢰찾기 로직
         ================================================== */
         let MINE_STATE = { isPlaying: false, size: 9, totalMines: 10, grid: [], firstClick: true, tool: 'shovel', rewardPts: 0 };
-        function checkMineSaveAndStart(size, totalMines, points) { const saveKey = 'mgp_mine_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); if(saved) { const parsed = JSON.parse(saved); if(parsed.size === size && parsed.totalMines === totalMines && confirm("이전에 풀던 지뢰찾기가 있어! 이어서 할래?")) { MINE_STATE = parsed; MINE_STATE.rewardPts = points; renderMineScreen(); return; } } MINE_STATE = { isPlaying: true, size: size, totalMines: totalMines, grid: [], firstClick: true, tool: 'shovel', rewardPts: points }; for(let i=0; i<size*size; i++) MINE_STATE.grid.push({ isMine: false, isOpen: false, isFlag: false, count: 0, index: i }); renderMineScreen(); saveMineProgress(); }
+        function checkMineSaveAndStart(size, totalMines, points) { 
+            const saveKey = 'mgp_mine_save_' + currentUser.name; const saved = localStorage.getItem(saveKey); 
+            if(saved) { 
+                const parsed = JSON.parse(saved); 
+                alert(`⚠️ 찾다 만 지뢰밭(${parsed.size}x${parsed.size})이 있어 이어서 시작합니다!\n(새 난이도를 원하면 '포기'를 눌러주세요.)`);
+                MINE_STATE = parsed; renderMineScreen(); return; 
+            } 
+            MINE_STATE = { isPlaying: true, size: size, totalMines: totalMines, grid: [], firstClick: true, tool: 'shovel', rewardPts: points }; for(let i=0; i<size*size; i++) MINE_STATE.grid.push({ isMine: false, isOpen: false, isFlag: false, count: 0, index: i }); renderMineScreen(); saveMineProgress(); 
+        }
         function renderMineScreen() { document.getElementById('mine-diff-screen').classList.add('hidden'); document.getElementById('mine-play-screen').classList.remove('hidden'); setMineTool('shovel'); updateMineLeftCounter(); const s = MINE_STATE.size; const maxW = Math.min(window.innerWidth - 30, 450); let cssS = Math.floor(maxW / s); if(cssS > 40) cssS = 40; if(cssS < 15) cssS = 15; document.documentElement.style.setProperty('--mine-cell-size', `${cssS}px`); const b = document.getElementById('mine-board'); b.style.gridTemplateColumns = `repeat(${s}, var(--mine-cell-size))`; b.innerHTML = ''; MINE_STATE.grid.forEach((cell, idx) => { const el = document.createElement('div'); el.className = 'mine-cell'; el.dataset.idx = idx; if(cell.isOpen) { el.classList.add('revealed'); if(cell.isMine) { el.classList.add('mine'); el.innerText = '💣'; } else if(cell.count > 0) { el.classList.add(`val-${cell.count}`); el.innerText = cell.count; } } else if(cell.isFlag) { el.classList.add('flagged'); el.innerText = '🚩'; } el.onclick = () => handleMineClick(idx, false); el.oncontextmenu = (e) => { e.preventDefault(); handleMineClick(idx, true); }; b.appendChild(el); }); }
         function handleMineClick(idx, isRightClick) { if(!MINE_STATE.isPlaying) return; const tool = isRightClick ? 'flag' : MINE_STATE.tool; const cell = MINE_STATE.grid[idx]; if(tool === 'flag') { if(cell.isOpen) return; cell.isFlag = !cell.isFlag; saveMineProgress(); renderMineScreen(); return; } if(cell.isFlag || cell.isOpen) return; if(MINE_STATE.firstClick) { placeMines(idx); MINE_STATE.firstClick = false; } if(cell.isMine) { mineGameOver(); return; } openMineCell(idx); checkMineWin(); renderMineScreen(); saveMineProgress(); }
         function openMineCell(idx) { const cell = MINE_STATE.grid[idx]; if(cell.isOpen || cell.isFlag) return; cell.isOpen = true; if(cell.count === 0) getMineNeighbors(idx).forEach(n => openMineCell(n)); }
@@ -448,7 +501,15 @@
         function saveMineProgress() { localStorage.setItem('mgp_mine_save_' + currentUser.name, JSON.stringify(MINE_STATE)); }
         function mineGameOver() { MINE_STATE.isPlaying = false; document.getElementById('mine-play-screen').classList.add('shake-effect'); setTimeout(() => document.getElementById('mine-play-screen').classList.remove('shake-effect'), 500); MINE_STATE.grid.forEach(c => { if(c.isMine) c.isOpen = true; }); renderMineScreen(); localStorage.removeItem('mgp_mine_save_' + currentUser.name); setTimeout(() => { alert("💣 앗! 지뢰가 터졌습니다!\n(포인트 획득 없이 종료됩니다)"); document.getElementById('mine-play-screen').classList.add('hidden'); document.getElementById('mine-diff-screen').classList.remove('hidden'); }, 600); }
         function checkMineWin() { if(MINE_STATE.grid.filter(c => !c.isMine).every(c => c.isOpen)) { MINE_STATE.isPlaying = false; localStorage.removeItem('mgp_mine_save_' + currentUser.name); MINE_STATE.grid.forEach(c => { if(c.isMine && !c.isFlag) c.isFlag = true; }); renderMineScreen(); handleGameWin(MINE_STATE.rewardPts, 'mine'); setTimeout(() => { document.getElementById('mine-play-screen').classList.add('hidden'); document.getElementById('mine-diff-screen').classList.remove('hidden'); }, 1500); } }
-        function giveUpMineGame() { checkAndConsumeTicket(() => { localStorage.removeItem('mgp_mine_save_' + currentUser.name); checkMineSaveAndStart(MINE_STATE.size, MINE_STATE.totalMines, MINE_STATE.rewardPts); }); }
+        
+        function giveUpMineGame() { 
+            checkAndConsumeTicket(() => { 
+                localStorage.removeItem('mgp_mine_save_' + currentUser.name); 
+                MINE_STATE.isPlaying = false;
+                document.getElementById('mine-play-screen').classList.add('hidden'); 
+                document.getElementById('mine-diff-screen').classList.remove('hidden'); 
+            }); 
+        }
     </script>
 </body>
 </html>
